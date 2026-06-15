@@ -34,7 +34,7 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <el-badge :value="unreadAlerts" :hidden="unreadAlerts === 0" class="header-badge" @click="goToAlerts">
+          <el-badge :value="unreadAlerts" :hidden="unreadAlerts === 0 || !canViewAlerts" class="header-badge" @click="goToAlerts">
             <i class="el-icon-bell notification-icon"></i>
           </el-badge>
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -47,7 +47,7 @@
               <el-dropdown-item command="profile">
                 <i class="el-icon-user"></i> 个人中心
               </el-dropdown-item>
-              <el-dropdown-item command="settings" v-if="isAdmin">
+              <el-dropdown-item command="settings" v-if="canViewSettings">
                 <i class="el-icon-setting"></i> 系统设置
               </el-dropdown-item>
               <el-dropdown-item divided command="logout">
@@ -85,8 +85,8 @@ export default Vue.extend({
     }
   },
   computed: {
-    ...mapState(['user']),
-    ...mapGetters(['isAdmin']),
+    ...mapState(['user', 'addRoutes']),
+    ...mapGetters(['isAdmin', 'hasPermission']),
     currentRoute() {
       return this.$route
     },
@@ -94,19 +94,18 @@ export default Vue.extend({
       return this.$route.path
     },
     menuRoutes(): RouteConfig[] {
-      const routes = (this.$router.options.routes || []).find(r => r.path === '/')?.children || []
-      const userRole = this.user?.role
-      return routes.filter(route => {
-        if (route.meta?.hidden) return false
-        const requiredRoles = route.meta?.roles as string[] | undefined
-        if (requiredRoles && userRole && !requiredRoles.includes(userRole)) {
-          return false
-        }
-        return true
-      })
+      const mainRoute = (this.addRoutes || []).find(r => r.path === '/')
+      if (!mainRoute || !mainRoute.children) return []
+      return mainRoute.children.filter(route => !route.meta?.hidden)
     },
     userInitials(): string {
       return getInitials(this.user?.name || '')
+    },
+    canViewSettings(): boolean {
+      return this.hasPermission('settings:view')
+    },
+    canViewAlerts(): boolean {
+      return this.hasPermission('alert')
     }
   },
   mounted() {
@@ -128,6 +127,10 @@ export default Vue.extend({
       }
     },
     goToAlerts() {
+      if (!this.canViewAlerts) {
+        this.$message.warning('您没有权限访问该页面')
+        return
+      }
       this.$router.push('/alerts')
     },
     handleCommand(command: string) {
@@ -136,6 +139,10 @@ export default Vue.extend({
           this.$router.push('/profile')
           break
         case 'settings':
+          if (!this.canViewSettings) {
+            this.$message.warning('您没有权限访问该页面')
+            return
+          }
           this.$router.push('/settings')
           break
         case 'logout':

@@ -1,5 +1,7 @@
 import dayjs from 'dayjs'
-import type { UserRole, AttendanceStatus, LeaveType, LeaveStatus } from '@/types'
+import type { UserRole, AttendanceStatus, LeaveType, LeaveStatus, Role } from '@/types'
+import { mockRoles } from '@/data/mockData'
+import type { RouteConfig } from 'vue-router'
 
 export const roleMap: Record<UserRole, string> = {
   super_admin: '超级管理员',
@@ -91,4 +93,60 @@ export function calcWorkDays(startDate: string, endDate: string): number {
     if (dayOfWeek !== 0 && dayOfWeek !== 6) count++
   }
   return count
+}
+
+export function getRoleByCode(code: UserRole): Role | undefined {
+  return mockRoles.find(r => r.code === code)
+}
+
+export function getPermissionsByRole(roleCode: UserRole): string[] {
+  const role = getRoleByCode(roleCode)
+  return role?.permissions || []
+}
+
+export function hasPermission(permissions: string[], requiredPermission: string): boolean {
+  if (permissions.includes('*')) return true
+  if (permissions.includes(requiredPermission)) return true
+  const requiredPrefix = requiredPermission.split(':')[0]
+  const requiredAction = requiredPermission.split(':')[1]
+  if (permissions.includes(`${requiredPrefix}:${requiredAction}`)) return true
+  if (permissions.includes(`${requiredPrefix}:view`) && requiredAction === 'view') return true
+  if (permissions.includes(`${requiredPrefix}:view:self`) && requiredPermission.endsWith(':view:self')) return true
+  if (permissions.includes(`${requiredPrefix}:view`)) {
+    if (requiredPermission.endsWith(':view:self')) return true
+  }
+  return false
+}
+
+export function hasRole(userRole: UserRole, requiredRoles: UserRole[]): boolean {
+  return requiredRoles.includes(userRole)
+}
+
+export function filterRoutesByPermission(
+  routes: RouteConfig[],
+  userRole: UserRole,
+  permissions: string[]
+): RouteConfig[] {
+  return routes.filter(route => {
+    if (route.meta?.public) return true
+    if (route.meta?.hidden) return true
+    const requiredRoles = route.meta?.roles as UserRole[] | undefined
+    if (requiredRoles && !requiredRoles.includes(userRole)) {
+      return false
+    }
+    const requiredPermission = route.meta?.permission as string | undefined
+    if (requiredPermission && !hasPermission(permissions, requiredPermission)) {
+      return false
+    }
+    if (route.children && route.children.length > 0) {
+      route.children = filterRoutesByPermission(route.children, userRole, permissions)
+    }
+    return true
+  })
+}
+
+export function generateMenuRoutes(routes: RouteConfig[]): RouteConfig[] {
+  const mainRoute = routes.find(r => r.path === '/')
+  if (!mainRoute || !mainRoute.children) return []
+  return mainRoute.children.filter(route => !route.meta?.hidden)
 }

@@ -423,7 +423,8 @@ export const mockRoles: Role[] = [
       'leave:view', 'leave:approve',
       'report:view', 'report:export',
       'settings:view', 'settings:edit',
-      'role:view', 'role:edit'
+      'role:view', 'role:edit',
+      'alert'
     ],
     createdAt: '2024-01-01 09:00:00',
     updatedAt: '2024-01-01 09:00:00'
@@ -438,7 +439,8 @@ export const mockRoles: Role[] = [
       'user:view',
       'attendance:view',
       'leave:view', 'leave:apply', 'leave:approve',
-      'report:view'
+      'report:view',
+      'alert'
     ],
     createdAt: '2024-01-01 09:00:00',
     updatedAt: '2024-01-01 09:00:00'

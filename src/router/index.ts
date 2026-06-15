@@ -1,122 +1,100 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
 import store from '@/store'
+import { constantRoutes, asyncRoutes } from './asyncRoutes'
+import { getPermissionsByRole, filterRoutesByPermission, hasPermission } from '@/utils'
+import type { UserRole } from '@/types'
 
 Vue.use(VueRouter)
 
-const routes: RouteConfig[] = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { public: true, title: '登录' }
-  },
-  {
-    path: '/',
-    component: () => import('@/layout/MainLayout.vue'),
-    redirect: '/dashboard',
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '仪表盘', icon: 'el-icon-s-data', permission: 'dashboard' }
-      },
-      {
-        path: 'users',
-        name: 'UserManagement',
-        component: () => import('@/views/UserManagement.vue'),
-        meta: { title: '用户管理', icon: 'el-icon-user', permission: 'user:view', roles: ['super_admin', 'admin', 'manager'] }
-      },
-      {
-        path: 'attendance',
-        name: 'Attendance',
-        component: () => import('@/views/Attendance.vue'),
-        meta: { title: '考勤打卡', icon: 'el-icon-time', permission: 'attendance:view' }
-      },
-      {
-        path: 'leaves',
-        name: 'LeaveManagement',
-        component: () => import('@/views/LeaveManagement.vue'),
-        meta: { title: '请假管理', icon: 'el-icon-document', permission: 'leave:view' }
-      },
-      {
-        path: 'alerts',
-        name: 'AlertCenter',
-        component: () => import('@/views/AlertCenter.vue'),
-        meta: { title: '异常预警', icon: 'el-icon-warning', permission: 'alert', roles: ['super_admin', 'admin', 'manager'] }
-      },
-      {
-        path: 'reports',
-        name: 'ReportCenter',
-        component: () => import('@/views/ReportCenter.vue'),
-        meta: { title: '报表中心', icon: 'el-icon-s-marketing', permission: 'report:view' }
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/Settings.vue'),
-        meta: { title: '系统设置', icon: 'el-icon-setting', permission: 'settings:view', roles: ['super_admin', 'admin'] }
-      },
-      {
-        path: 'settings/roles',
-        name: 'RoleManagement',
-        component: () => import('@/views/RoleManagement.vue'),
-        meta: { title: '角色权限管理', icon: 'el-icon-lock', permission: 'role:view', roles: ['super_admin', 'admin'] }
-      },
-      {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('@/views/Profile.vue'),
-        meta: { title: '个人中心', hidden: true }
-      }
-    ]
-  },
-  {
-    path: '*',
-    redirect: '/dashboard'
-  }
-]
-
-const router = new VueRouter({
+const createRouter = () => new VueRouter({
   mode: 'history',
-  routes
+  routes: constantRoutes
 })
 
+let router = createRouter()
+
+export function resetRouter() {
+  const newRouter = createRouter()
+  router.matcher = newRouter.matcher
+}
+
+export function generateRoutes(userRole: UserRole): RouteConfig[] {
+  const permissions = getPermissionsByRole(userRole)
+  return filterRoutesByPermission(asyncRoutes, userRole, permissions)
+}
+
+export function addDynamicRoutes(userRole: UserRole) {
+  const accessRoutes = generateRoutes(userRole)
+  accessRoutes.forEach(route => {
+    router.addRoute(route)
+  })
+  return accessRoutes
+}
+
 router.beforeEach(async (to, from, next) => {
-  const token = localStorage.getItem('token')
+  try {
+    const token = localStorage.getItem('token')
 
-  if (to.meta.public) {
-    if (token) {
-      next('/dashboard')
-    } else {
-      next()
+    if (to.meta.public) {
+      if (token) {
+        next('/dashboard')
+      } else {
+        next()
+      }
+      return
     }
-    return
-  }
 
-  if (!token) {
-    next('/login')
-    return
-  }
-
-  if (!store.state.user) {
-    await store.dispatch('initAuth')
-    if (!store.state.user) {
+    if (!token) {
       next('/login')
       return
     }
-  }
 
-  const userRole = store.state.user?.role
-  const requiredRoles = to.meta.roles as string[] | undefined
-  if (requiredRoles && !requiredRoles.includes(userRole!)) {
+    let user = store.state.user
+    if (!user) {
+      try {
+        await store.dispatch('initAuth')
+        user = store.state.user
+      } catch (e) {
+        console.error('initAuth error:', e)
+        next('/login')
+        return
+      }
+      if (!user) {
+        next('/login')
+        return
+      }
+    }
+
+    if (!store.state.addRoutes || store.state.addRoutes.length === 0) {
+      resetRouter()
+      const userRole = user.role as UserRole
+      const accessRoutes = addDynamicRoutes(userRole)
+      store.commit('SET_ADD_ROUTES', accessRoutes)
+      next({ ...to, replace: true })
+      return
+    }
+
+    const userRole = user.role
+    const requiredRoles = to.meta.roles as string[] | undefined
+    if (requiredRoles && userRole && !requiredRoles.includes(userRole)) {
+      console.warn(`Access denied for route ${to.path}: role ${userRole} not in ${requiredRoles}`)
+      next('/dashboard')
+      return
+    }
+
+    const requiredPermission = to.meta.permission as string | undefined
+    if (requiredPermission && !hasPermission(store.state.permissions, requiredPermission)) {
+      console.warn(`Access denied for route ${to.path}: missing permission ${requiredPermission}`)
+      next('/dashboard')
+      return
+    }
+
+    next()
+  } catch (error) {
+    console.error('Router guard error:', error)
     next('/dashboard')
-    return
   }
-
-  next()
 })
 
 export default router

@@ -1,8 +1,10 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import type { RouteConfig } from 'vue-router'
 import type { User, DashboardStats } from '@/types'
 import { getCurrentUser, logout as apiLogout } from '@/api/auth'
 import { getDashboardStats } from '@/api/report'
+import { getPermissionsByRole, hasPermission } from '@/utils'
 
 Vue.use(Vuex)
 
@@ -11,6 +13,8 @@ export interface RootState {
   token: string | null
   loading: boolean
   dashboardStats: DashboardStats | null
+  permissions: string[]
+  addRoutes: RouteConfig[]
 }
 
 export default new Vuex.Store<RootState>({
@@ -18,7 +22,9 @@ export default new Vuex.Store<RootState>({
     user: null,
     token: localStorage.getItem('token'),
     loading: false,
-    dashboardStats: null
+    dashboardStats: null,
+    permissions: [],
+    addRoutes: []
   },
   mutations: {
     SET_USER(state, user: User | null) {
@@ -42,6 +48,12 @@ export default new Vuex.Store<RootState>({
     },
     SET_DASHBOARD_STATS(state, stats: DashboardStats) {
       state.dashboardStats = stats
+    },
+    SET_PERMISSIONS(state, permissions: string[]) {
+      state.permissions = permissions
+    },
+    SET_ADD_ROUTES(state, routes: RouteConfig[]) {
+      state.addRoutes = routes
     }
   },
   actions: {
@@ -52,20 +64,28 @@ export default new Vuex.Store<RootState>({
       try {
         const user = await getCurrentUser()
         commit('SET_USER', user)
+        const permissions = getPermissionsByRole(user.role)
+        commit('SET_PERMISSIONS', permissions)
       } catch {
         commit('SET_TOKEN', null)
         commit('SET_USER', null)
+        commit('SET_PERMISSIONS', [])
+        commit('SET_ADD_ROUTES', [])
       }
     },
     async login({ commit }, payload: { user: User; token: string }) {
       commit('SET_USER', payload.user)
       commit('SET_TOKEN', payload.token)
+      const permissions = getPermissionsByRole(payload.user.role)
+      commit('SET_PERMISSIONS', permissions)
     },
     async logout({ commit }) {
       await apiLogout()
       commit('SET_USER', null)
       commit('SET_TOKEN', null)
       commit('SET_DASHBOARD_STATS', null)
+      commit('SET_PERMISSIONS', [])
+      commit('SET_ADD_ROUTES', [])
     },
     async loadDashboardStats({ commit }) {
       const stats = await getDashboardStats()
@@ -77,6 +97,9 @@ export default new Vuex.Store<RootState>({
     isSuperAdmin: state => state.user?.role === 'super_admin',
     isAdmin: state => state.user?.role === 'super_admin' || state.user?.role === 'admin',
     isManager: state => state.user?.role === 'super_admin' || state.user?.role === 'admin' || state.user?.role === 'manager',
-    isEmployee: state => state.user?.role === 'employee'
+    isEmployee: state => state.user?.role === 'employee',
+    hasPermission: state => (permission: string) => {
+      return hasPermission(state.permissions, permission)
+    }
   }
 })

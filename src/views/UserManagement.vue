@@ -3,7 +3,7 @@
     <div class="page-card">
       <div class="page-header">
         <h2>用户管理</h2>
-        <el-button type="primary" icon="el-icon-plus" @click="handleAdd" v-if="canEdit">新增员工</el-button>
+        <el-button type="primary" icon="el-icon-plus" @click="handleAdd" v-if="canCreate">新增员工</el-button>
       </div>
 
       <div class="filter-bar">
@@ -65,11 +65,11 @@
         <el-table-column prop="createdAt" label="入职时间" width="160">
           <template slot-scope="scope">{{ formatDateTime(scope.row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right" v-if="canEdit">
+        <el-table-column label="操作" width="180" fixed="right" v-if="canView || canEdit || canDelete">
           <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button type="text" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" style="color: #F56C6C;" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" size="small" @click="handleView(scope.row)" v-if="canView">查看</el-button>
+            <el-button type="text" size="small" @click="handleEdit(scope.row)" v-if="canEdit">编辑</el-button>
+            <el-button type="text" size="small" style="color: #F56C6C;" @click="handleDelete(scope.row)" v-if="canDelete">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -305,9 +305,18 @@ export default Vue.extend({
     }
   },
   computed: {
-    ...mapGetters(['isAdmin']),
+    ...mapGetters(['isAdmin', 'hasPermission']),
     canEdit(): boolean {
-      return this.isAdmin
+      return this.hasPermission('user:edit')
+    },
+    canCreate(): boolean {
+      return this.hasPermission('user:create')
+    },
+    canDelete(): boolean {
+      return this.hasPermission('user:delete')
+    },
+    canView(): boolean {
+      return this.hasPermission('user:view')
     },
     dialogTitle(): string {
       return this.isEdit ? '编辑员工' : '新增员工'

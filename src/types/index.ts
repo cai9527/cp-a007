@@ -204,3 +204,170 @@ export interface PaginatedResponse<T> {
   page: number
   pageSize: number
 }
+
+export type SalaryItemType = 'earning' | 'deduction'
+
+export interface SalaryItem {
+  id: number
+  name: string
+  code: string
+  type: SalaryItemType
+  description: string
+  isTaxable: boolean
+  isFixed: boolean
+  defaultValue: number
+  status: 'active' | 'inactive'
+  sort: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EmployeeSalaryProfile {
+  id: number
+  userId: number
+  userName: string
+  departmentName: string
+  position: string
+  baseSalary: number
+  performanceSalary: number
+  allowance: number
+  socialSecurityBase: number
+  housingFundBase: number
+  taxFreeAmount: number
+  effectiveDate: string
+  status: 'active' | 'inactive'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalaryDetailItem {
+  itemId: number
+  itemName: string
+  itemCode: string
+  type: SalaryItemType
+  amount: number
+  isTaxable: boolean
+}
+
+export interface SalaryRecord {
+  id: number
+  userId: number
+  userName: string
+  departmentName: string
+  position: string
+  month: string
+  baseSalary: number
+  performanceSalary: number
+  overtimePay: number
+  bonus: number
+  allowance: number
+  otherEarnings: number
+  totalEarnings: number
+  socialSecurityPersonal: number
+  housingFundPersonal: number
+  personalIncomeTax: number
+  otherDeductions: number
+  totalDeductions: number
+  netSalary: number
+  actualWorkDays: number
+  standardWorkDays: number
+  attendanceRate: number
+  details: SalaryDetailItem[]
+  status: 'draft' | 'confirmed' | 'paid'
+  paidAt?: string
+  confirmedBy?: number
+  confirmedByName?: string
+  confirmedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalaryCalculationParams {
+  month: string
+  departmentId?: number
+  userId?: number
+}
+
+export interface SalaryStatistics {
+  month: string
+  totalEmployees: number
+  paidEmployees: number
+  totalBaseSalary: number
+  totalPerformanceSalary: number
+  totalOvertimePay: number
+  totalBonus: number
+  totalAllowance: number
+  totalEarnings: number
+  totalSocialSecurityPersonal: number
+  totalHousingFundPersonal: number
+  totalPersonalIncomeTax: number
+  totalDeductions: number
+  totalNetSalary: number
+  avgNetSalary: number
+  maxNetSalary: number
+  minNetSalary: number
+  departmentSalaryStats: {
+    departmentId: number
+    departmentName: string
+    employeeCount: number
+    totalNetSalary: number
+    avgNetSalary: number
+  }[]
+  salaryDistribution: {
+    range: string
+    count: number
+    percentage: number
+  }[]
+  monthlyTrend: {
+    month: string
+    totalNetSalary: number
+    avgNetSalary: number
+    employeeCount: number
+  }[]
+}
+
+export interface PayslipTemplate {
+  id: number
+  name: string
+  code: string
+  showFields: string[]
+  layout: 'simple' | 'detailed'
+  logoUrl?: string
+  companyName: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type TaxRateBracket = {
+  min: number
+  max: number
+  rate: number
+  deduction: number
+}
+
+export interface SocialSecurityConfig {
+  id: number
+  pensionRate: number
+  medicalRate: number
+  unemploymentRate: number
+  workInjuryRate: number
+  maternityRate: number
+  housingFundRate: number
+  effectiveDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaxConfig {
+  id: number
+  threshold: number
+  brackets: TaxRateBracket[]
+  specialDeductions: {
+    name: string
+    code: string
+    amount: number
+  }[]
+  effectiveDate: string
+  createdAt: string
+  updatedAt: string
+}

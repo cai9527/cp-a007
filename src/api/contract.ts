@@ -185,13 +185,105 @@ export async function deleteContract(id: number): Promise<boolean> {
   return true
 }
 
+function evaluateCondition(condition: any, contract: any): boolean {
+  const { type, operator, value } = condition
+  let actualValue: any
+  
+  switch (type) {
+    case 'amount':
+      actualValue = contract.salaryInfo?.baseSalary || 0
+      break
+    case 'contract_type':
+      actualValue = contract.type
+      break
+    case 'department':
+      actualValue = contract.workInfo?.departmentId
+      break
+    case 'probation':
+      actualValue = contract.workInfo?.probationPeriod || 0
+      break
+    default:
+      return true
+  }
+  
+  switch (operator) {
+    case 'gt': return actualValue > value
+    case 'gte': return actualValue >= value
+    case 'lt': return actualValue < value
+    case 'lte': return actualValue <= value
+    case 'eq': return actualValue === value
+    case 'in': return Array.isArray(value) && value.includes(actualValue)
+    case 'not_in': return Array.isArray(value) && !value.includes(actualValue)
+    default: return true
+  }
+}
+
+function getApproverByRole(role: string, departmentId?: number): { id: number; name: string } {
+  const roleUserMap: Record<string, { id: number; name: string }> = {
+    manager: departmentId === 2 
+      ? { id: 62, name: '赵明' }
+      : { id: 3, name: '张伟' },
+    hr_admin: { id: 2, name: '李华' },
+    legal: { id: 60, name: '陈静' },
+    finance: { id: 61, name: '刘强' },
+    super_admin: { id: 1, name: '超级管理员' },
+    admin: { id: 1, name: '超级管理员' }
+  }
+  return roleUserMap[role] || { id: 1, name: '超级管理员' }
+}
+
+function generateApprovalStepsForContract(contract: any): any[] {
+  const flow = approvalFlowsClone.find(f => f.contractType === contract.type) 
+    || approvalFlowsClone.find(f => f.isDefault)
+  if (!flow) return []
+  
+  const steps: any[] = []
+  let effectiveStepOrder = 1
+  
+  flow.steps.forEach((stepConfig: any) => {
+    if (stepConfig.conditions && stepConfig.conditions.length > 0) {
+      const allConditionsMet = stepConfig.conditions.every((cond: any) => evaluateCondition(cond, contract))
+      if (!allConditionsMet) return
+    }
+    
+    const approver = getApproverByRole(stepConfig.role, contract.workInfo?.departmentId)
+    const now = dayjs()
+    const deadline = stepConfig.deadlineHours 
+      ? now.add(stepConfig.deadlineHours, 'hour').format('YYYY-MM-DD HH:mm:ss')
+      : undefined
+    
+    steps.push({
+      id: contract.id * 100 + effectiveStepOrder,
+      stepOrder: effectiveStepOrder,
+      stepName: stepConfig.stepName,
+      approverId: approver.id,
+      approverName: approver.name,
+      approverRole: stepConfig.role,
+      approverRoleName: stepConfig.roleName,
+      mode: stepConfig.mode,
+      status: 'pending',
+      comment: '',
+      approvedAt: undefined,
+      deadline
+    })
+    
+    effectiveStepOrder++
+  })
+  
+  return steps
+}
+
 export async function submitContractForApproval(id: number): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
   if (!contract) return null
+  
+  const approvalSteps = generateApprovalStepsForContract(contract)
+  contract.approvalSteps = approvalSteps as any
   contract.status = 'pending_approval'
-  contract.currentApprovalStep = 1
+  contract.currentApprovalStep = approvalSteps.length > 0 ? 1 : 0
   contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  
   return contract
 }
 
@@ -389,6 +481,275 @@ export async function deleteContractApprovalFlow(id: number): Promise<boolean> {
   if (idx === -1) return false
   approvalFlowsClone.splice(idx, 1)
   return true
+}
+
+export async function delegateApproval(
+  id: number,
+  stepOrder: number,
+  delegateToUserId: number,
+  delegateToUserName: string,
+  reason?: string
+): Promise<WorkerContract | null> {
+  await delay(300)
+  const contract = contractsClone.find(c => c.id === id)
+  if (!contract) return null
+  
+  const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
+  if (!step) return null
+  
+  step.status = 'delegated'
+  step.delegatedTo = delegateToUserId
+  step.delegatedToName = delegateToUserName
+  step.delegatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  
+  contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  return contract
+}
+
+export async function returnApproval(
+  id: number,
+  stepOrder: number,
+  returnToStepOrder: number,
+  reason: string
+): Promise<WorkerContract | null> {
+  await delay(300)
+  const contract = contractsClone.find(c => c.id === id)
+  if (!contract) return null
+  
+  const currentStep = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
+  if (!currentStep) return null
+  
+  currentStep.status = 'returned'
+  currentStep.returnedTo = returnToStepOrder
+  currentStep.returnedReason = reason
+  currentStep.returnedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  
+  contract.approvalSteps.forEach(step => {
+    if (step.stepOrder < stepOrder) {
+      step.status = 'pending'
+      step.comment = ''
+      step.approvedAt = undefined
+    }
+  })
+  
+  contract.currentApprovalStep = returnToStepOrder
+  contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  return contract
+}
+
+export async function addSignatory(
+  id: number,
+  stepOrder: number,
+  signerId: number,
+  signerName: string,
+  comment?: string
+): Promise<WorkerContract | null> {
+  await delay(300)
+  const contract = contractsClone.find(c => c.id === id)
+  if (!contract) return null
+  
+  const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
+  if (!step) return null
+  
+  if (!step.addSigners) {
+    step.addSigners = []
+  }
+  
+  step.addSigners.push({
+    id: Date.now(),
+    name: signerName,
+    comment,
+    status: 'pending' as const,
+    signedAt: undefined
+  })
+  
+  contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  return contract
+}
+
+export async function getApprovalTimeline(id: number): Promise<any[]> {
+  await delay(200)
+  const contract = contractsClone.find(c => c.id === id)
+  if (!contract) return []
+  
+  const timeline: any[] = []
+  let itemId = 1
+  
+  timeline.push({
+    id: itemId++,
+    action: 'submit',
+    operatorId: contract.createdBy,
+    operatorName: contract.createdByName,
+    operatorRole: '提交人',
+    comment: '提交合同审核',
+    timestamp: contract.createdAt
+  })
+  
+  contract.approvalSteps.forEach(step => {
+    if (step.status === 'approved') {
+      timeline.push({
+        id: itemId++,
+        action: 'approve',
+        operatorId: step.approverId,
+        operatorName: step.approverName,
+        operatorRole: step.approverRoleName,
+        comment: step.comment || '审核通过',
+        timestamp: step.approvedAt,
+        stepOrder: step.stepOrder,
+        stepName: step.stepName
+      })
+    } else if (step.status === 'rejected') {
+      timeline.push({
+        id: itemId++,
+        action: 'reject',
+        operatorId: step.approverId,
+        operatorName: step.approverName,
+        operatorRole: step.approverRoleName,
+        comment: step.comment || '审核驳回',
+        timestamp: step.approvedAt,
+        stepOrder: step.stepOrder,
+        stepName: step.stepName
+      })
+    } else if (step.status === 'delegated') {
+      timeline.push({
+        id: itemId++,
+        action: 'delegate',
+        operatorId: step.approverId,
+        operatorName: step.approverName,
+        operatorRole: step.approverRoleName,
+        toUser: step.delegatedToName,
+        comment: step.delegatedAt,
+        timestamp: step.delegatedAt,
+        stepOrder: step.stepOrder,
+        stepName: step.stepName
+      })
+    } else if (step.status === 'returned') {
+      timeline.push({
+        id: itemId++,
+        action: 'return',
+        operatorId: step.approverId,
+        operatorName: step.approverName,
+        operatorRole: step.approverRoleName,
+        comment: step.returnedReason,
+        timestamp: step.returnedAt,
+        stepOrder: step.stepOrder,
+        stepName: step.stepName
+      })
+    }
+  })
+  
+  if (contract.status === 'approved' || contract.status === 'signed' || contract.status === 'active') {
+    const lastApprovedStep = [...contract.approvalSteps].reverse().find(s => s.status === 'approved')
+    if (lastApprovedStep) {
+      timeline.push({
+        id: itemId++,
+        action: 'complete',
+        operatorId: 0,
+        operatorName: '系统',
+        operatorRole: '系统',
+        comment: '审核流程已完成',
+        timestamp: lastApprovedStep.approvedAt
+      })
+    }
+  }
+  
+  return timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+}
+
+export async function getPendingApprovals(
+  userId: number,
+  userRole: string,
+  params: PaginationParams
+): Promise<PaginatedResponse<WorkerContract>> {
+  await delay(300)
+  
+  let list = contractsClone.filter(c => c.status === 'pending_approval')
+  
+  list = list.filter(c => {
+    const currentStep = c.approvalSteps.find(s => s.status === 'pending')
+    if (!currentStep) return false
+    
+    if (currentStep.approverId === userId) return true
+    
+    if (currentStep.approverRole === userRole) return true
+    
+    if (currentStep.delegatedTo === userId) return true
+    
+    return false
+  })
+  
+  const total = list.length
+  const start = (params.page - 1) * params.pageSize
+  list = list.slice(start, start + params.pageSize)
+  
+  return { list, total, page: params.page, pageSize: params.pageSize }
+}
+
+export async function getApprovalDelegations(): Promise<any[]> {
+  await delay(200)
+  return [
+    {
+      id: 1,
+      fromUserId: 2,
+      fromUserName: '李华',
+      toUserId: 60,
+      toUserName: '陈静',
+      reason: '请假期间委托审批',
+      startDate: dayjs().subtract(1, 'day').format('YYYY-MM-DD'),
+      endDate: dayjs().add(3, 'day').format('YYYY-MM-DD'),
+      isActive: true,
+      createdAt: dayjs().subtract(2, 'day').format('YYYY-MM-DD HH:mm:ss')
+    }
+  ]
+}
+
+export async function batchApproveContracts(
+  ids: number[],
+  comment?: string
+): Promise<WorkerContract[]> {
+  await delay(500)
+  const results: WorkerContract[] = []
+  for (const id of ids) {
+    const contract = contractsClone.find(c => c.id === id)
+    if (!contract) continue
+    const currentStep = contract.approvalSteps.find(s => s.status === 'pending')
+    if (!currentStep) continue
+    currentStep.status = 'approved'
+    currentStep.comment = comment
+    currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    const nextStep = contract.approvalSteps.find(s => s.status === 'pending')
+    if (nextStep) {
+      contract.currentApprovalStep = nextStep.stepOrder
+    } else {
+      contract.status = 'approved'
+      contract.currentApprovalStep = 0
+    }
+    contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    results.push(contract)
+  }
+  return results
+}
+
+export async function batchRejectContracts(
+  ids: number[],
+  reason: string
+): Promise<WorkerContract[]> {
+  await delay(500)
+  const results: WorkerContract[] = []
+  for (const id of ids) {
+    const contract = contractsClone.find(c => c.id === id)
+    if (!contract) continue
+    const currentStep = contract.approvalSteps.find(s => s.status === 'pending')
+    if (!currentStep) continue
+    currentStep.status = 'rejected'
+    currentStep.comment = reason
+    currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    contract.status = 'rejected'
+    contract.currentApprovalStep = 0
+    contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    results.push(contract)
+  }
+  return results
 }
 
 export function generateContractNo(): string {

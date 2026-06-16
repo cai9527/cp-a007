@@ -374,7 +374,33 @@ export interface TaxConfig {
 
 export type ContractType = 'fixed_term' | 'open_ended' | 'part_time' | 'probation' | 'project'
 export type ContractStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'signed' | 'active' | 'expired' | 'terminated' | 'archived'
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'delegated' | 'returned' | 'cancelled'
+export type ApprovalMode = 'sequential' | 'countersign' | 'any_sign'
+export type ApprovalConditionType = 'amount' | 'contract_type' | 'department' | 'probation'
+
+export interface ApprovalCondition {
+  type: ApprovalConditionType
+  operator: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'in' | 'not_in'
+  value: number | string | string[]
+  description?: string
+}
+
+export interface ApprovalStepConfig {
+  stepOrder: number
+  stepName: string
+  role: string
+  roleName: string
+  mode: ApprovalMode
+  approverId?: number
+  approverName?: string
+  approverIds?: number[]
+  conditions?: ApprovalCondition[]
+  requireComment: boolean
+  deadlineHours?: number
+  canDelegate: boolean
+  canReturn: boolean
+  canAddSign: boolean
+}
 
 export interface ContractTemplate {
   id: number
@@ -418,12 +444,23 @@ export interface ContractWorkInfo {
 export interface ApprovalStep {
   id: number
   stepOrder: number
+  stepName: string
   approverId: number
   approverName: string
   approverRole: string
+  approverRoleName: string
+  mode: ApprovalMode
   status: ApprovalStatus
   comment?: string
   approvedAt?: string
+  deadline?: string
+  delegatedTo?: number
+  delegatedToName?: string
+  delegatedAt?: string
+  returnedTo?: number
+  returnedReason?: string
+  returnedAt?: string
+  addSigners?: { id: number; name: string; comment?: string; signedAt?: string; status?: ApprovalStatus }[]
 }
 
 export interface ContractSignatory {
@@ -501,15 +538,39 @@ export interface ContractApprovalFlowConfig {
   id: number
   name: string
   contractType: ContractType
-  steps: {
-    stepOrder: number
-    role: string
-    roleName: string
-    approverId?: number
-    approverName?: string
-  }[]
+  description?: string
+  steps: ApprovalStepConfig[]
   isDefault: boolean
   status: 'active' | 'inactive'
+  createdBy: number
+  createdByName: string
   createdAt: string
   updatedAt: string
+}
+
+export interface ApprovalDelegation {
+  id: number
+  fromUserId: number
+  fromUserName: string
+  toUserId: number
+  toUserName: string
+  reason?: string
+  startDate: string
+  endDate: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface ApprovalTimelineItem {
+  id: number
+  action: 'submit' | 'approve' | 'reject' | 'delegate' | 'return' | 'add_sign' | 'complete' | 'reject'
+  operatorId: number
+  operatorName: string
+  operatorRole: string
+  comment?: string
+  timestamp: string
+  stepOrder?: number
+  stepName?: string
+  fromUser?: string
+  toUser?: string
 }

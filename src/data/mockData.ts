@@ -34,12 +34,13 @@ import type {
 } from '@/types'
 
 export const mockDepartments: Department[] = [
-  { id: 1, name: '总公司', parentId: null, employeeCount: 58, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
-  { id: 2, name: '技术部', parentId: 1, parentName: '总公司', employeeCount: 20, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
+  { id: 1, name: '总公司', parentId: null, employeeCount: 61, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
+  { id: 2, name: '技术部', parentId: 1, parentName: '总公司', employeeCount: 21, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
   { id: 3, name: '产品部', parentId: 1, parentName: '总公司', employeeCount: 10, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
   { id: 4, name: '人力资源部', parentId: 1, parentName: '总公司', employeeCount: 8, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
-  { id: 5, name: '财务部', parentId: 1, parentName: '总公司', employeeCount: 6, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
+  { id: 5, name: '财务部', parentId: 1, parentName: '总公司', employeeCount: 7, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
   { id: 6, name: '市场部', parentId: 1, parentName: '总公司', employeeCount: 14, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
+  { id: 9, name: '法务部', parentId: 1, parentName: '总公司', employeeCount: 1, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
   { id: 7, name: '前端组', parentId: 2, parentName: '技术部', employeeCount: 8, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' },
   { id: 8, name: '后端组', parentId: 2, parentName: '技术部', employeeCount: 12, createdAt: '2024-01-01 09:00:00', updatedAt: '2024-01-01 09:00:00' }
 ]
@@ -143,6 +144,57 @@ departmentsWithStaff.forEach(({ deptId, deptName, count }) => {
     })
   }
 })
+
+mockUsers.push(
+  {
+    id: userId++,
+    username: 'legal',
+    name: '陈静',
+    email: 'chenjing@company.com',
+    phone: '13900139008',
+    idCard: '110101199003150025',
+    photo: '',
+    role: 'legal',
+    departmentId: 9,
+    departmentName: '法务部',
+    position: '法务专员',
+    status: 'active',
+    createdAt: '2024-01-15 09:00:00',
+    updatedAt: '2024-01-15 09:00:00'
+  },
+  {
+    id: userId++,
+    username: 'finance',
+    name: '刘强',
+    email: 'liuqiang@company.com',
+    phone: '13900139009',
+    idCard: '110101198912200036',
+    photo: '',
+    role: 'finance',
+    departmentId: 5,
+    departmentName: '财务部',
+    position: '财务主管',
+    status: 'active',
+    createdAt: '2024-01-15 09:00:00',
+    updatedAt: '2024-01-15 09:00:00'
+  },
+  {
+    id: userId++,
+    username: 'dept_mgr_tech',
+    name: '赵明',
+    email: 'zhaoming@company.com',
+    phone: '13900139010',
+    idCard: '110101198605100047',
+    photo: '',
+    role: 'manager',
+    departmentId: 2,
+    departmentName: '技术部',
+    position: '技术部经理',
+    status: 'active',
+    createdAt: '2024-01-15 09:00:00',
+    updatedAt: '2024-01-15 09:00:00'
+  }
+)
 
 function generateAttendanceRecords(): Attendance[] {
   const records: Attendance[] = []
@@ -475,15 +527,33 @@ export const mockRoles: Role[] = [
     updatedAt: '2024-01-01 09:00:00'
   },
   {
-    id: 5,
-    name: '部门管理员',
-    code: 'manager',
-    description: '部门考勤管理、部门报表查看、请假审批',
+    id: 4,
+    name: '法务专员',
+    code: 'legal',
+    description: '合同法律审核、合同风险评估、合同条款审核',
     permissions: [
       'dashboard',
-      'user:view',
-      'attendance:view',
-      'leave:view', 'leave:apply', 'leave:approve',
+      'contract:view',
+      'contract:approval',
+      'contract:template:view',
+      'report:view',
+      'alert'
+    ],
+    createdAt: '2024-01-01 09:00:00',
+    updatedAt: '2024-01-01 09:00:00'
+  },
+  {
+    id: 5,
+    name: '财务专员',
+    code: 'finance',
+    description: '财务预算审核、薪资成本审核、合同费用审核',
+    permissions: [
+      'dashboard',
+      'contract:view',
+      'contract:approval',
+      'salary:record:view',
+      'salary:statistics:view',
+      'salary:report:view',
       'report:view',
       'alert'
     ],
@@ -492,6 +562,24 @@ export const mockRoles: Role[] = [
   },
   {
     id: 6,
+    name: '部门经理',
+    code: 'manager',
+    description: '部门考勤管理、部门报表查看、请假审批、合同部门审核',
+    permissions: [
+      'dashboard',
+      'user:view',
+      'attendance:view',
+      'leave:view', 'leave:apply', 'leave:approve',
+      'contract:view',
+      'contract:approval',
+      'report:view',
+      'alert'
+    ],
+    createdAt: '2024-01-01 09:00:00',
+    updatedAt: '2024-01-01 09:00:00'
+  },
+  {
+    id: 7,
     name: '普通员工',
     code: 'employee',
     description: '个人考勤查看、个人信息管理、考勤申请',
@@ -1181,29 +1269,100 @@ export const mockContractTemplates: ContractTemplate[] = [
   }
 ]
 
-function generateContractApprovalSteps(contractId: number): ApprovalStep[] {
-  return [
-    {
-      id: contractId * 100 + 1,
-      stepOrder: 1,
-      approverId: 2,
-      approverName: '李华',
-      approverRole: 'HR主管',
-      status: 'approved',
-      comment: '合同信息完整，同意',
-      approvedAt: '2024-03-15 10:00:00'
-    },
-    {
-      id: contractId * 100 + 2,
-      stepOrder: 2,
-      approverId: 1,
-      approverName: '超级管理员',
-      approverRole: '超级管理员',
-      status: 'pending',
-      comment: '',
-      approvedAt: undefined
+function evaluateCondition(condition: any, contract: any): boolean {
+  const { type, operator, value } = condition
+  let actualValue: any
+  
+  switch (type) {
+    case 'amount':
+      actualValue = contract.salaryInfo?.baseSalary || 0
+      break
+    case 'contract_type':
+      actualValue = contract.type
+      break
+    case 'department':
+      actualValue = contract.workInfo?.departmentId
+      break
+    case 'probation':
+      actualValue = contract.workInfo?.probationPeriod || 0
+      break
+    default:
+      return true
+  }
+  
+  switch (operator) {
+    case 'gt': return actualValue > value
+    case 'gte': return actualValue >= value
+    case 'lt': return actualValue < value
+    case 'lte': return actualValue <= value
+    case 'eq': return actualValue === value
+    case 'in': return Array.isArray(value) && value.includes(actualValue)
+    case 'not_in': return Array.isArray(value) && !value.includes(actualValue)
+    default: return true
+  }
+}
+
+function getApproverByRole(role: string, departmentId?: number): { id: number; name: string } {
+  const roleUserMap: Record<string, { id: number; name: string }> = {
+    manager: departmentId === 2 
+      ? { id: 62, name: '赵明' }
+      : { id: 3, name: '张伟' },
+    hr_admin: { id: 2, name: '李华' },
+    legal: { id: 60, name: '陈静' },
+    finance: { id: 61, name: '刘强' },
+    super_admin: { id: 1, name: '超级管理员' },
+    admin: { id: 1, name: '超级管理员' }
+  }
+  return roleUserMap[role] || { id: 1, name: '超级管理员' }
+}
+
+function generateContractApprovalSteps(contract: any): ApprovalStep[] {
+  const flow = mockContractApprovalFlows.find(f => f.contractType === contract.type) 
+    || mockContractApprovalFlows.find(f => f.isDefault)
+  if (!flow) return []
+  
+  const steps: ApprovalStep[] = []
+  let effectiveStepOrder = 1
+  
+  flow.steps.forEach((stepConfig, index) => {
+    if (stepConfig.conditions && stepConfig.conditions.length > 0) {
+      const allConditionsMet = stepConfig.conditions.every(cond => evaluateCondition(cond, contract))
+      if (!allConditionsMet) return
     }
-  ]
+    
+    const approver = getApproverByRole(stepConfig.role, contract.workInfo?.departmentId)
+    const now = dayjs()
+    const deadline = stepConfig.deadlineHours 
+      ? now.add(stepConfig.deadlineHours, 'hour').format('YYYY-MM-DD HH:mm:ss')
+      : undefined
+    
+    const isBeforePending = contract.status === 'pending_approval' && index < 1
+    const isPending = contract.status === 'pending_approval' && index === 1
+    
+    steps.push({
+      id: contract.id * 100 + effectiveStepOrder,
+      stepOrder: effectiveStepOrder,
+      stepName: stepConfig.stepName,
+      approverId: approver.id,
+      approverName: approver.name,
+      approverRole: stepConfig.role,
+      approverRoleName: stepConfig.roleName,
+      mode: stepConfig.mode,
+      status: isBeforePending ? 'approved' : (isPending ? 'pending' : 'pending'),
+      comment: isBeforePending ? '信息审核通过，同意提交' : '',
+      approvedAt: isBeforePending 
+        ? dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'hour').format('YYYY-MM-DD HH:mm:ss')
+        : undefined,
+      deadline,
+      canDelegate: stepConfig.canDelegate,
+      canReturn: stepConfig.canReturn,
+      canAddSign: stepConfig.canAddSign
+    } as any)
+    
+    effectiveStepOrder++
+  })
+  
+  return steps
 }
 
 function generateContractSignatories(contractId: number, userName: string): ContractSignatory[] {
@@ -1291,13 +1450,9 @@ function generateMockContracts(): WorkerContract[] {
       content: undefined,
       attachments: [],
       
-      approvalSteps: status === 'pending_approval' || status === 'approved' || status === 'signed' || status === 'active' 
-        ? generateContractApprovalSteps(index + 1) 
-        : [],
-      currentApprovalStep: status === 'pending_approval' ? 2 : 0,
-      signatories: status === 'signed' || status === 'active' 
-        ? generateContractSignatories(index + 1, user.name).map(s => ({ ...s, status: 'signed' as const, signedAt: startDate.add(1, 'day').format('YYYY-MM-DD HH:mm:ss') }))
-        : generateContractSignatories(index + 1, user.name),
+      approvalSteps: [],
+      currentApprovalStep: 0,
+      signatories: [] as any,
       
       remarks: '',
       terminationReason: undefined,
@@ -1310,6 +1465,18 @@ function generateMockContracts(): WorkerContract[] {
       signedAt: status === 'signed' || status === 'active' ? startDate.format('YYYY-MM-DD HH:mm:ss') : undefined,
       archivedAt: status === 'archived' ? dayjs().format('YYYY-MM-DD HH:mm:ss') : undefined
     }
+    
+    if (status === 'pending_approval' || status === 'approved' || status === 'signed' || status === 'active') {
+      contract.approvalSteps = generateContractApprovalSteps(contract)
+      if (contract.approvalSteps.length > 0 && status === 'pending_approval') {
+        const pendingStep = contract.approvalSteps.find(s => s.status === 'pending')
+        contract.currentApprovalStep = pendingStep ? pendingStep.stepOrder : 0
+      }
+    }
+    
+    contract.signatories = status === 'signed' || status === 'active' 
+      ? generateContractSignatories(contract.id, user.name).map(s => ({ ...s, status: 'signed' as const, signedAt: startDate.add(1, 'day').format('YYYY-MM-DD HH:mm:ss') }))
+      : generateContractSignatories(contract.id, user.name)
     
     contracts.push(contract)
   })
@@ -1371,32 +1538,241 @@ export const mockContractReminders: ContractReminder[] = (() => {
 export const mockContractApprovalFlows: ContractApprovalFlowConfig[] = [
   {
     id: 1,
-    name: '标准合同审批流程',
+    name: '标准劳动合同审批流程',
     contractType: 'fixed_term',
+    description: '固定期限劳动合同标准审批流程，根据薪资金额自动路由到不同审核节点',
     steps: [
-      { stepOrder: 1, role: 'hr_admin', roleName: 'HR管理员' },
-      { stepOrder: 2, role: 'super_admin', roleName: '超级管理员' }
+      {
+        stepOrder: 1,
+        stepName: '部门经理审核',
+        role: 'manager',
+        roleName: '部门经理',
+        mode: 'sequential',
+        requireComment: false,
+        deadlineHours: 24,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      },
+      {
+        stepOrder: 2,
+        stepName: 'HR专员审核',
+        role: 'hr_admin',
+        roleName: 'HR管理员',
+        mode: 'sequential',
+        requireComment: false,
+        deadlineHours: 12,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: true
+      },
+      {
+        stepOrder: 3,
+        stepName: '财务审核',
+        role: 'finance',
+        roleName: '财务专员',
+        mode: 'sequential',
+        conditions: [{
+          type: 'amount',
+          operator: 'gte',
+          value: 10000,
+          description: '基本工资≥10000元需财务审核'
+        }],
+        requireComment: true,
+        deadlineHours: 24,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      },
+      {
+        stepOrder: 4,
+        stepName: '法务审核',
+        role: 'legal',
+        roleName: '法务专员',
+        mode: 'sequential',
+        conditions: [{
+          type: 'amount',
+          operator: 'gte',
+          value: 20000,
+          description: '基本工资≥20000元需法务审核'
+        }],
+        requireComment: true,
+        deadlineHours: 48,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: true
+      },
+      {
+        stepOrder: 5,
+        stepName: '总经理审批',
+        role: 'super_admin',
+        roleName: '总经理',
+        mode: 'sequential',
+        conditions: [{
+          type: 'amount',
+          operator: 'gte',
+          value: 50000,
+          description: '基本工资≥50000元需总经理审批'
+        }],
+        requireComment: true,
+        deadlineHours: 72,
+        canDelegate: false,
+        canReturn: true,
+        canAddSign: false
+      }
     ],
     isDefault: true,
     status: 'active',
+    createdBy: 1,
+    createdByName: '超级管理员',
     createdAt: '2024-01-01 09:00:00',
-    updatedAt: '2024-01-01 09:00:00'
+    updatedAt: '2024-06-15 10:30:00'
   },
   {
     id: 2,
-    name: '无固定期限合同审批流程',
+    name: '无固定期限劳动合同审批流程',
     contractType: 'open_ended',
+    description: '无固定期限劳动合同审批流程，需经法务和总经理最终审批',
     steps: [
-      { stepOrder: 1, role: 'hr_admin', roleName: 'HR管理员' },
-      { stepOrder: 2, role: 'admin', roleName: '系统管理员' },
-      { stepOrder: 3, role: 'super_admin', roleName: '超级管理员' }
+      {
+        stepOrder: 1,
+        stepName: '部门经理审核',
+        role: 'manager',
+        roleName: '部门经理',
+        mode: 'sequential',
+        requireComment: true,
+        deadlineHours: 24,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      },
+      {
+        stepOrder: 2,
+        stepName: 'HR主管审核',
+        role: 'hr_admin',
+        roleName: 'HR管理员',
+        mode: 'sequential',
+        requireComment: true,
+        deadlineHours: 12,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: true
+      },
+      {
+        stepOrder: 3,
+        stepName: '财务审核',
+        role: 'finance',
+        roleName: '财务专员',
+        mode: 'sequential',
+        requireComment: true,
+        deadlineHours: 24,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      },
+      {
+        stepOrder: 4,
+        stepName: '法务审核',
+        role: 'legal',
+        roleName: '法务专员',
+        mode: 'sequential',
+        requireComment: true,
+        deadlineHours: 48,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: true
+      },
+      {
+        stepOrder: 5,
+        stepName: '总经理审批',
+        role: 'super_admin',
+        roleName: '总经理',
+        mode: 'sequential',
+        requireComment: true,
+        deadlineHours: 72,
+        canDelegate: false,
+        canReturn: true,
+        canAddSign: false
+      }
     ],
     isDefault: false,
     status: 'active',
+    createdBy: 1,
+    createdByName: '超级管理员',
     createdAt: '2024-02-01 09:00:00',
-    updatedAt: '2024-02-01 09:00:00'
+    updatedAt: '2024-06-15 10:30:00'
+  },
+  {
+    id: 3,
+    name: '试用期合同审批流程',
+    contractType: 'probation',
+    description: '试用期劳动合同简易审批流程',
+    steps: [
+      {
+        stepOrder: 1,
+        stepName: '部门经理审核',
+        role: 'manager',
+        roleName: '部门经理',
+        mode: 'sequential',
+        requireComment: false,
+        deadlineHours: 12,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      },
+      {
+        stepOrder: 2,
+        stepName: 'HR专员审核',
+        role: 'hr_admin',
+        roleName: 'HR管理员',
+        mode: 'sequential',
+        requireComment: false,
+        deadlineHours: 12,
+        canDelegate: true,
+        canReturn: true,
+        canAddSign: false
+      }
+    ],
+    isDefault: false,
+    status: 'active',
+    createdBy: 1,
+    createdByName: '超级管理员',
+    createdAt: '2024-03-01 09:00:00',
+    updatedAt: '2024-06-15 10:30:00'
   }
 ]
+
+export const approvalRoleMap: Record<string, string> = {
+  manager: '部门经理',
+  hr_admin: 'HR管理员',
+  legal: '法务专员',
+  finance: '财务专员',
+  admin: '系统管理员',
+  super_admin: '总经理'
+}
+
+export const approvalModeMap: Record<string, string> = {
+  sequential: '依次审批',
+  countersign: '会签审批',
+  any_sign: '或签审批'
+}
+
+export const approvalConditionTypeMap: Record<string, string> = {
+  amount: '薪资金额',
+  contract_type: '合同类型',
+  department: '所属部门',
+  probation: '试用期'
+}
+
+export const approvalOperatorMap: Record<string, string> = {
+  gt: '大于',
+  gte: '大于等于',
+  lt: '小于',
+  lte: '小于等于',
+  eq: '等于',
+  in: '包含',
+  not_in: '不包含'
+}
 
 export function getContractStats() {
   const total = mockContracts.length

@@ -59,13 +59,19 @@ export const asyncRoutes: RouteConfig[] = [
         path: 'contract/approval',
         name: 'ContractApproval',
         component: () => import('@/views/ContractApproval.vue'),
-        meta: { title: '合同审核', icon: 'el-icon-edit-outline', permission: 'contract:approval', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+        meta: { title: '合同审核', icon: 'el-icon-edit-outline', permission: 'contract:approval', roles: ['super_admin', 'hr_admin', 'manager', 'legal', 'finance'], group: 'contract' }
       },
       {
         path: 'contract/reminders',
         name: 'ContractReminders',
         component: () => import('@/views/ContractReminders.vue'),
         meta: { title: '到期提醒', icon: 'el-icon-bell', permission: 'contract:reminder', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+      },
+      {
+        path: 'contract/flow-config',
+        name: 'ContractApprovalFlowConfig',
+        component: () => import('@/views/ContractApprovalFlowConfig.vue'),
+        meta: { title: '审核流程配置', icon: 'el-icon-set-up', permission: 'contract:flow:view', roles: ['super_admin', 'hr_admin'], group: 'contract' }
       },
       {
         path: 'contract/create',

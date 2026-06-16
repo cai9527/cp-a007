@@ -128,6 +128,7 @@ export default Vue.extend({
       const routes = this.menuRoutes
       const groupMap = new Map<string, RouteConfig[]>()
       const result: MenuItem[] = []
+      const insertedGroups = new Set<string>()
 
       routes.forEach(route => {
         const group = route.meta?.group as string | undefined
@@ -136,23 +137,28 @@ export default Vue.extend({
             groupMap.set(group, [])
           }
           groupMap.get(group)!.push(route)
+          if (!insertedGroups.has(group)) {
+            const config = groupConfig[group]
+            if (config) {
+              result.push({
+                group,
+                title: config.title,
+                icon: config.icon,
+                children: groupMap.get(group)!
+              })
+              insertedGroups.add(group)
+            }
+          } else {
+            const existing = result.find((r: any) => 'group' in r && r.group === group) as MenuGroup | undefined
+            if (existing) {
+              existing.children = groupMap.get(group)!
+            }
+          }
         } else {
           result.push({
             path: route.path,
             name: route.name,
             meta: route.meta
-          })
-        }
-      })
-
-      groupMap.forEach((children, group) => {
-        const config = groupConfig[group]
-        if (config) {
-          result.push({
-            group,
-            title: config.title,
-            icon: config.icon,
-            children
           })
         }
       })

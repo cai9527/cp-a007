@@ -140,9 +140,17 @@ export function filterRoutesByPermission(
       return false
     }
     if (route.children && route.children.length > 0) {
-      route.children = filterRoutesByPermission(route.children, userRole, permissions)
+      const filteredChildren = filterRoutesByPermission([...route.children], userRole, permissions)
+      ;(route as any)._filteredChildren = filteredChildren
     }
     return true
+  }).map(route => {
+    if ((route as any)._filteredChildren) {
+      const result = { ...route, children: (route as any)._filteredChildren }
+      delete (result as any)._filteredChildren
+      return result
+    }
+    return route
   })
 }
 

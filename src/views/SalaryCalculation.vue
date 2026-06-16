@@ -26,10 +26,10 @@
             filterable
           >
             <el-option v-for="user in filteredUsers" :key="user.id" :label="user.name" :value="user.id" />
-          </el-form-item>
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="el-icon-calculator" :loading="calculating" @click="handleCalculate">
+          <el-button type="primary" icon="el-icon-s-finance" :loading="calculating" @click="handleCalculate">
             计算薪资
           </el-button>
         </el-form-item>

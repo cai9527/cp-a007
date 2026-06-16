@@ -44,18 +44,6 @@ export const asyncRoutes: RouteConfig[] = [
         meta: { title: '报表中心', icon: 'el-icon-s-marketing', permission: 'report:view:self' }
       },
       {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/Settings.vue'),
-        meta: { title: '系统设置', icon: 'el-icon-setting', permission: 'settings:view', roles: ['super_admin', 'admin'] }
-      },
-      {
-        path: 'settings/roles',
-        name: 'RoleManagement',
-        component: () => import('@/views/RoleManagement.vue'),
-        meta: { title: '角色权限管理', icon: 'el-icon-lock', permission: 'role:view', roles: ['super_admin', 'admin'] }
-      },
-      {
         path: 'salary/items',
         name: 'SalaryItems',
         component: () => import('@/views/SalaryItems.vue'),
@@ -65,7 +53,7 @@ export const asyncRoutes: RouteConfig[] = [
         path: 'salary/calculation',
         name: 'SalaryCalculation',
         component: () => import('@/views/SalaryCalculation.vue'),
-        meta: { title: '薪资计算', icon: 'el-icon-calculator', permission: 'salary:calculate', roles: ['super_admin', 'hr_admin'], group: 'salary' }
+        meta: { title: '薪资计算', icon: 'el-icon-s-finance', permission: 'salary:calculate', roles: ['super_admin', 'hr_admin'], group: 'salary' }
       },
       {
         path: 'salary/statistics',
@@ -78,6 +66,18 @@ export const asyncRoutes: RouteConfig[] = [
         name: 'SalaryReport',
         component: () => import('@/views/SalaryReport.vue'),
         meta: { title: '工资报表', icon: 'el-icon-document', permission: 'salary:report:view', roles: ['super_admin', 'hr_admin'], group: 'salary' }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/Settings.vue'),
+        meta: { title: '系统设置', icon: 'el-icon-setting', permission: 'settings:view', roles: ['super_admin', 'admin'] }
+      },
+      {
+        path: 'settings/roles',
+        name: 'RoleManagement',
+        component: () => import('@/views/RoleManagement.vue'),
+        meta: { title: '角色权限管理', icon: 'el-icon-lock', permission: 'role:view', roles: ['super_admin', 'admin'] }
       },
       {
         path: 'profile',

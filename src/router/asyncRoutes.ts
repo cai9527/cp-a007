@@ -59,25 +59,25 @@ export const asyncRoutes: RouteConfig[] = [
         path: 'salary/items',
         name: 'SalaryItems',
         component: () => import('@/views/SalaryItems.vue'),
-        meta: { title: '工资项目配置', icon: 'el-icon-s-order', permission: 'salary:item:view', roles: ['super_admin', 'admin'] }
+        meta: { title: '工资项目配置', icon: 'el-icon-s-order', permission: 'salary:item:view', roles: ['super_admin', 'hr_admin'], group: 'salary' }
       },
       {
         path: 'salary/calculation',
         name: 'SalaryCalculation',
         component: () => import('@/views/SalaryCalculation.vue'),
-        meta: { title: '薪资计算', icon: 'el-icon-calculator', permission: 'salary:calculate', roles: ['super_admin', 'admin', 'manager'] }
+        meta: { title: '薪资计算', icon: 'el-icon-calculator', permission: 'salary:calculate', roles: ['super_admin', 'hr_admin'], group: 'salary' }
       },
       {
         path: 'salary/statistics',
         name: 'SalaryStatistics',
         component: () => import('@/views/SalaryStatistics.vue'),
-        meta: { title: '工资统计分析', icon: 'el-icon-s-data', permission: 'salary:statistics:view', roles: ['super_admin', 'admin', 'manager'] }
+        meta: { title: '工资统计分析', icon: 'el-icon-s-data', permission: 'salary:statistics:view', roles: ['super_admin', 'hr_admin'], group: 'salary' }
       },
       {
         path: 'salary/report',
         name: 'SalaryReport',
         component: () => import('@/views/SalaryReport.vue'),
-        meta: { title: '工资报表', icon: 'el-icon-document', permission: 'salary:report:view' }
+        meta: { title: '工资报表', icon: 'el-icon-document', permission: 'salary:report:view', roles: ['super_admin', 'hr_admin'], group: 'salary' }
       },
       {
         path: 'profile',
@@ -92,6 +92,10 @@ export const asyncRoutes: RouteConfig[] = [
     redirect: '/dashboard'
   }
 ]
+
+export const groupConfig: Record<string, { title: string; icon: string }> = {
+  salary: { title: '工资管理', icon: 'el-icon-money' }
+}
 
 export const constantRoutes: RouteConfig[] = [
   {

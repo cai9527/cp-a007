@@ -15,10 +15,20 @@
         class="sidebar-menu"
         router
       >
-        <template v-for="route in menuRoutes">
-          <el-menu-item v-if="!route.meta?.hidden" :index="resolvePath(route.path)" :key="route.name">
-            <i :class="route.meta?.icon || 'el-icon-document'"></i>
-            <span slot="title">{{ route.meta?.title }}</span>
+        <template v-for="item in menuTree">
+          <el-submenu v-if="item.children" :index="'group-' + item.group" :key="'group-' + item.group">
+            <template slot="title">
+              <i :class="item.icon || 'el-icon-document'"></i>
+              <span>{{ item.title }}</span>
+            </template>
+            <el-menu-item v-for="child in item.children" :index="resolvePath(child.path)" :key="child.name">
+              <i :class="child.meta?.icon || 'el-icon-document'"></i>
+              <span slot="title">{{ child.meta?.title }}</span>
+            </el-menu-item>
+          </el-submenu>
+          <el-menu-item v-else :index="resolvePath(item.path)" :key="item.name">
+            <i :class="item.meta?.icon || 'el-icon-document'"></i>
+            <span slot="title">{{ item.meta?.title }}</span>
           </el-menu-item>
         </template>
       </el-menu>
@@ -75,6 +85,22 @@ import { mapState, mapGetters } from 'vuex'
 import type { RouteConfig } from 'vue-router'
 import { getInitials } from '@/utils'
 import { getAlerts } from '@/api/attendance'
+import { groupConfig } from '@/router/asyncRoutes'
+
+interface MenuGroup {
+  group: string
+  title: string
+  icon: string
+  children: RouteConfig[]
+}
+
+interface MenuLeaf {
+  path: string
+  name?: string
+  meta?: any
+}
+
+type MenuItem = MenuGroup | MenuLeaf
 
 export default Vue.extend({
   name: 'MainLayout',
@@ -97,6 +123,41 @@ export default Vue.extend({
       const mainRoute = (this.addRoutes || []).find(r => r.path === '/')
       if (!mainRoute || !mainRoute.children) return []
       return mainRoute.children.filter(route => !route.meta?.hidden)
+    },
+    menuTree(): MenuItem[] {
+      const routes = this.menuRoutes
+      const groupMap = new Map<string, RouteConfig[]>()
+      const result: MenuItem[] = []
+
+      routes.forEach(route => {
+        const group = route.meta?.group as string | undefined
+        if (group) {
+          if (!groupMap.has(group)) {
+            groupMap.set(group, [])
+          }
+          groupMap.get(group)!.push(route)
+        } else {
+          result.push({
+            path: route.path,
+            name: route.name,
+            meta: route.meta
+          })
+        }
+      })
+
+      groupMap.forEach((children, group) => {
+        const config = groupConfig[group]
+        if (config) {
+          result.push({
+            group,
+            title: config.title,
+            icon: config.icon,
+            children
+          })
+        }
+      })
+
+      return result
     },
     userInitials(): string {
       return getInitials(this.user?.name || '')
@@ -287,6 +348,24 @@ export default Vue.extend({
 
 ::v-deep .el-menu-item i {
   color: inherit;
+}
+
+::v-deep .el-submenu__title {
+  height: 50px;
+  line-height: 50px;
+
+  &:hover {
+    background-color: #002140 !important;
+  }
+
+  i {
+    color: inherit;
+  }
+}
+
+::v-deep .el-submenu .el-menu-item {
+  min-width: 0;
+  padding-left: 52px !important;
 }
 
 ::v-deep .el-dropdown-link {

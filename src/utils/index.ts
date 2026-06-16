@@ -6,6 +6,7 @@ import type { RouteConfig } from 'vue-router'
 export const roleMap: Record<UserRole, string> = {
   super_admin: '超级管理员',
   admin: '系统管理员',
+  hr_admin: 'HR管理员',
   manager: '部门管理员',
   employee: '普通员工'
 }

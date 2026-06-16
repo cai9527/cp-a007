@@ -76,7 +76,7 @@ export const mockUsers: User[] = [
     phone: '13800138001',
     idCard: '110101199203150002',
     photo: '',
-    role: 'admin',
+    role: 'hr_admin',
     departmentId: 4,
     departmentName: '人力资源部',
     position: 'HR主管',
@@ -432,7 +432,22 @@ export const mockRoles: Role[] = [
       'report:view', 'report:export',
       'settings:view', 'settings:edit',
       'role:view', 'role:edit',
-      'alert',
+      'alert'
+    ],
+    createdAt: '2024-01-01 09:00:00',
+    updatedAt: '2024-01-01 09:00:00'
+  },
+  {
+    id: 3,
+    name: 'HR管理员',
+    code: 'hr_admin',
+    description: '工资管理、薪资计算、工资报表、员工薪资档案',
+    permissions: [
+      'dashboard',
+      'user:view',
+      'attendance:view',
+      'leave:view',
+      'report:view',
       'salary:item:view', 'salary:item:create', 'salary:item:edit', 'salary:item:delete',
       'salary:profile:view', 'salary:profile:edit',
       'salary:calculate', 'salary:confirm', 'salary:pay',
@@ -445,7 +460,7 @@ export const mockRoles: Role[] = [
     updatedAt: '2024-01-01 09:00:00'
   },
   {
-    id: 3,
+    id: 5,
     name: '部门管理员',
     code: 'manager',
     description: '部门考勤管理、部门报表查看、请假审批',
@@ -455,18 +470,13 @@ export const mockRoles: Role[] = [
       'attendance:view',
       'leave:view', 'leave:apply', 'leave:approve',
       'report:view',
-      'alert',
-      'salary:calculate',
-      'salary:record:view',
-      'salary:statistics:view',
-      'salary:report:view',
-      'salary:payslip:view'
+      'alert'
     ],
     createdAt: '2024-01-01 09:00:00',
     updatedAt: '2024-01-01 09:00:00'
   },
   {
-    id: 4,
+    id: 6,
     name: '普通员工',
     code: 'employee',
     description: '个人考勤查看、个人信息管理、考勤申请',
@@ -475,9 +485,7 @@ export const mockRoles: Role[] = [
       'user:view:self',
       'attendance:view:self',
       'leave:view:self', 'leave:apply',
-      'report:view:self',
-      'salary:report:view:self',
-      'salary:payslip:view:self'
+      'report:view:self'
     ],
     createdAt: '2024-01-01 09:00:00',
     updatedAt: '2024-01-01 09:00:00'

@@ -392,7 +392,7 @@ export default Vue.extend({
     ...mapState({
       user: (state: RootState) => state.user
     }),
-    ...mapGetters(['hasPermission', 'isAdmin']),
+    ...mapGetters(['hasPermission', 'isSalaryAdmin']),
     filteredUsers(): User[] {
       if (this.calcForm.departmentId) {
         return this.users.filter(u => u.departmentId === this.calcForm.departmentId && u.status === 'active')
@@ -400,14 +400,14 @@ export default Vue.extend({
       return this.users.filter(u => u.status === 'active')
     },
     canConfirm(): boolean {
-      return this.selectedIds.length > 0 &&
+      return this.hasPermission('salary:confirm') && this.selectedIds.length > 0 &&
         this.selectedRecords.every(id => {
           const record = this.tableData.find(r => r.id === id)
           return record?.status === 'draft'
         })
     },
     canMarkPaid(): boolean {
-      return this.selectedIds.length > 0 &&
+      return this.hasPermission('salary:pay') && this.selectedIds.length > 0 &&
         this.selectedRecords.every(id => {
           const record = this.tableData.find(r => r.id === id)
           return record?.status === 'confirmed'
@@ -444,6 +444,18 @@ export default Vue.extend({
     deductionDetails() {
       if (!this.currentDetailRecord) return []
       return this.currentDetailRecord.details.filter(d => d.type === 'deduction')
+    }
+  },
+  created() {
+    if (!this.$store.getters.isSalaryAdmin) {
+      this.$message.error('您没有权限访问薪资计算页面')
+      this.$router.replace('/dashboard')
+      return
+    }
+    const role = this.$store.state.user?.role
+    if (role !== 'super_admin' && role !== 'hr_admin') {
+      this.$message.error('您没有权限访问工资管理模块')
+      this.$router.replace('/dashboard')
     }
   },
   mounted() {

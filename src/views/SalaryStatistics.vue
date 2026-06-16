@@ -118,6 +118,7 @@ import * as echarts from 'echarts'
 import { getSalaryStats } from '@/api/salary'
 import { currentMonth } from '@/data/mockData'
 import type { SalaryStatistics } from '@/types'
+import { mapGetters } from 'vuex'
 
 const chartColors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9c27b0', '#00bcd4', '#ff9800']
 
@@ -131,6 +132,21 @@ export default Vue.extend({
       deptChart: null as echarts.ECharts | null,
       distributionChart: null as echarts.ECharts | null,
       compositionChart: null as echarts.ECharts | null
+    }
+  },
+  computed: {
+    ...mapGetters(['isSalaryAdmin'])
+  },
+  created() {
+    if (!this.$store.getters.isSalaryAdmin) {
+      this.$message.error('您没有权限访问工资统计分析页面')
+      this.$router.replace('/dashboard')
+      return
+    }
+    const role = this.$store.state.user?.role
+    if (role !== 'super_admin' && role !== 'hr_admin') {
+      this.$message.error('您没有权限访问工资管理模块')
+      this.$router.replace('/dashboard')
     }
   },
   mounted() {

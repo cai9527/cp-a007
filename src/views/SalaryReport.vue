@@ -494,7 +494,7 @@ export default Vue.extend({
     }
   },
   computed: {
-    ...mapGetters(['isEmployee', 'isAdmin', 'hasPermission']),
+    ...mapGetters(['isEmployee', 'isSalaryAdmin', 'hasPermission']),
     canViewProfile(): boolean {
       return this.hasPermission('salary:profile:view')
     },
@@ -515,6 +515,18 @@ export default Vue.extend({
     },
     deductionItems() {
       return this.currentPayslip?.details.filter(d => d.type === 'deduction') || []
+    }
+  },
+  created() {
+    if (!this.$store.getters.isSalaryAdmin) {
+      this.$message.error('您没有权限访问工资报表页面')
+      this.$router.replace('/dashboard')
+      return
+    }
+    const role = this.$store.state.user?.role
+    if (role !== 'super_admin' && role !== 'hr_admin') {
+      this.$message.error('您没有权限访问工资管理模块')
+      this.$router.replace('/dashboard')
     }
   },
   mounted() {

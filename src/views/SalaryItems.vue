@@ -227,7 +227,7 @@ export default Vue.extend({
     }
   },
   computed: {
-    ...mapGetters(['isAdmin', 'hasPermission']),
+    ...mapGetters(['isSalaryAdmin', 'hasPermission']),
     canEdit(): boolean {
       return this.hasPermission('salary:item:edit')
     },
@@ -239,6 +239,18 @@ export default Vue.extend({
     },
     dialogTitle(): string {
       return this.isEdit ? '编辑工资项目' : '新增工资项目'
+    }
+  },
+  created() {
+    if (!this.$store.getters.isSalaryAdmin) {
+      this.$message.error('您没有权限访问工资项目配置页面')
+      this.$router.replace('/dashboard')
+      return
+    }
+    const role = this.$store.state.user?.role
+    if (role !== 'super_admin' && role !== 'hr_admin') {
+      this.$message.error('您没有权限访问工资管理模块')
+      this.$router.replace('/dashboard')
     }
   },
   mounted() {

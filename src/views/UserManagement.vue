@@ -381,6 +381,7 @@ export default Vue.extend({
       const map: Record<string, string> = {
         super_admin: 'danger',
         admin: 'warning',
+        hr_admin: 'success',
         manager: 'primary',
         employee: 'info'
       }

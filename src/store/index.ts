@@ -98,6 +98,7 @@ export default new Vuex.Store<RootState>({
     isAdmin: state => state.user?.role === 'super_admin' || state.user?.role === 'admin',
     isManager: state => state.user?.role === 'super_admin' || state.user?.role === 'admin' || state.user?.role === 'manager',
     isEmployee: state => state.user?.role === 'employee',
+    isSalaryAdmin: state => state.user?.role === 'super_admin' || state.user?.role === 'hr_admin',
     hasPermission: state => (permission: string) => {
       return hasPermission(state.permissions, permission)
     }

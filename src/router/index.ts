@@ -32,6 +32,14 @@ export function addDynamicRoutes(userRole: UserRole) {
   return accessRoutes
 }
 
+const SALARY_MODULE_PATHS = [
+  '/salary/items',
+  '/salary/calculation',
+  '/salary/statistics',
+  '/salary/report'
+]
+const SALARY_ALLOWED_ROLES: UserRole[] = ['super_admin', 'hr_admin']
+
 router.beforeEach(async (to, from, next) => {
   try {
     const token = localStorage.getItem('token')
@@ -62,6 +70,20 @@ router.beforeEach(async (to, from, next) => {
       }
       if (!user) {
         next('/login')
+        return
+      }
+    }
+
+    const isSalaryPath = SALARY_MODULE_PATHS.some(p => to.path.startsWith(p))
+    if (isSalaryPath) {
+      if (!user.role || !SALARY_ALLOWED_ROLES.includes(user.role as UserRole)) {
+        console.warn(`[Salary Module] Access denied for user ${user.username} (role: ${user.role}) to path: ${to.path}`)
+        next('/dashboard')
+        return
+      }
+      if (!store.getters.isSalaryAdmin) {
+        console.warn(`[Salary Module] isSalaryAdmin check failed for user ${user.username}`)
+        next('/dashboard')
         return
       }
     }

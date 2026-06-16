@@ -1269,272 +1269,6 @@ export const mockContractTemplates: ContractTemplate[] = [
   }
 ]
 
-function evaluateCondition(condition: any, contract: any): boolean {
-  const { type, operator, value } = condition
-  let actualValue: any
-  
-  switch (type) {
-    case 'amount':
-      actualValue = contract.salaryInfo?.baseSalary || 0
-      break
-    case 'contract_type':
-      actualValue = contract.type
-      break
-    case 'department':
-      actualValue = contract.workInfo?.departmentId
-      break
-    case 'probation':
-      actualValue = contract.workInfo?.probationPeriod || 0
-      break
-    default:
-      return true
-  }
-  
-  switch (operator) {
-    case 'gt': return actualValue > value
-    case 'gte': return actualValue >= value
-    case 'lt': return actualValue < value
-    case 'lte': return actualValue <= value
-    case 'eq': return actualValue === value
-    case 'in': return Array.isArray(value) && value.includes(actualValue)
-    case 'not_in': return Array.isArray(value) && !value.includes(actualValue)
-    default: return true
-  }
-}
-
-function getApproverByRole(role: string, departmentId?: number): { id: number; name: string } {
-  const roleUserMap: Record<string, { id: number; name: string }> = {
-    manager: departmentId === 2 
-      ? { id: 62, name: '赵明' }
-      : { id: 3, name: '张伟' },
-    hr_admin: { id: 2, name: '李华' },
-    legal: { id: 60, name: '陈静' },
-    finance: { id: 61, name: '刘强' },
-    super_admin: { id: 1, name: '超级管理员' },
-    admin: { id: 1, name: '超级管理员' }
-  }
-  return roleUserMap[role] || { id: 1, name: '超级管理员' }
-}
-
-function generateContractApprovalSteps(contract: any): ApprovalStep[] {
-  const flow = mockContractApprovalFlows.find(f => f.contractType === contract.type) 
-    || mockContractApprovalFlows.find(f => f.isDefault)
-  if (!flow) return []
-  
-  const steps: ApprovalStep[] = []
-  let effectiveStepOrder = 1
-  
-  flow.steps.forEach((stepConfig, index) => {
-    if (stepConfig.conditions && stepConfig.conditions.length > 0) {
-      const allConditionsMet = stepConfig.conditions.every(cond => evaluateCondition(cond, contract))
-      if (!allConditionsMet) return
-    }
-    
-    const approver = getApproverByRole(stepConfig.role, contract.workInfo?.departmentId)
-    const now = dayjs()
-    const deadline = stepConfig.deadlineHours 
-      ? now.add(stepConfig.deadlineHours, 'hour').format('YYYY-MM-DD HH:mm:ss')
-      : undefined
-    
-    const isBeforePending = contract.status === 'pending_approval' && index < 1
-    const isPending = contract.status === 'pending_approval' && index === 1
-    
-    steps.push({
-      id: contract.id * 100 + effectiveStepOrder,
-      stepOrder: effectiveStepOrder,
-      stepName: stepConfig.stepName,
-      approverId: approver.id,
-      approverName: approver.name,
-      approverRole: stepConfig.role,
-      approverRoleName: stepConfig.roleName,
-      mode: stepConfig.mode,
-      status: isBeforePending ? 'approved' : (isPending ? 'pending' : 'pending'),
-      comment: isBeforePending ? '信息审核通过，同意提交' : '',
-      approvedAt: isBeforePending 
-        ? dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'hour').format('YYYY-MM-DD HH:mm:ss')
-        : undefined,
-      deadline,
-      canDelegate: stepConfig.canDelegate,
-      canReturn: stepConfig.canReturn,
-      canAddSign: stepConfig.canAddSign
-    } as any)
-    
-    effectiveStepOrder++
-  })
-  
-  return steps
-}
-
-function generateContractSignatories(contractId: number, userName: string): ContractSignatory[] {
-  return [
-    {
-      id: contractId * 100 + 1,
-      userId: 2,
-      userName: '李华',
-      role: 'hr',
-      signatureData: undefined,
-      signedAt: undefined,
-      status: 'pending'
-    },
-    {
-      id: contractId * 100 + 2,
-      userId: 0,
-      userName: userName,
-      role: 'employee',
-      signatureData: undefined,
-      signedAt: undefined,
-      status: 'pending'
-    }
-  ]
-}
-
-function generateMockContracts(): WorkerContract[] {
-  const contracts: WorkerContract[] = []
-  const activeEmployees = mockUsers.filter(u => u.status === 'active' && u.role === 'employee')
-  
-  const statuses: ContractStatus[] = ['active', 'active', 'active', 'signed', 'pending_approval', 'expired', 'draft']
-  
-  activeEmployees.forEach((user, index) => {
-    const startDate = dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'month')
-    const termMonths = [12, 24, 36][Math.floor(Math.random() * 3)]
-    const endDate = startDate.add(termMonths, 'month')
-    const status = statuses[index % statuses.length]
-    
-    const contract: WorkerContract = {
-      id: index + 1,
-      contractNo: `HT${dayjs().format('YYYY')}${String(index + 1).padStart(5, '0')}`,
-      templateId: 1,
-      templateName: '标准劳动合同模板',
-      type: 'fixed_term',
-      status,
-      
-      userId: user.id,
-      userName: user.name,
-      userIdCard: user.idCard,
-      userPhone: user.phone,
-      userEmail: user.email,
-      userAddress: '北京市朝阳区某某路某某号',
-      
-      workInfo: {
-        position: user.position,
-        departmentId: user.departmentId,
-        departmentName: user.departmentName,
-        workLocation: '北京市',
-        workHours: '09:00-18:00',
-        workDays: '周一至周五',
-        probationPeriod: 3,
-        probationSalary: 6000
-      },
-      
-      salaryInfo: {
-        baseSalary: 8000 + Math.floor(Math.random() * 12000),
-        performanceSalary: 2000 + Math.floor(Math.random() * 3000),
-        overtimeSalary: 0,
-        bonus: 5000,
-        allowance: 1000,
-        socialSecurityBase: 8000,
-        housingFundBase: 8000,
-        payCycle: 'monthly',
-        payDay: 15
-      },
-      
-      startDate: startDate.format('YYYY-MM-DD'),
-      endDate: endDate.format('YYYY-MM-DD'),
-      termMonths,
-      
-      renewalCount: Math.floor(Math.random() * 2),
-      lastRenewalDate: undefined,
-      nextRenewalDate: endDate.subtract(1, 'month').format('YYYY-MM-DD'),
-      expirationReminderSent: Math.random() > 0.5,
-      
-      content: undefined,
-      attachments: [],
-      
-      approvalSteps: [],
-      currentApprovalStep: 0,
-      signatories: [] as any,
-      
-      remarks: '',
-      terminationReason: undefined,
-      terminatedAt: undefined,
-      
-      createdBy: 2,
-      createdByName: '李华',
-      createdAt: startDate.subtract(3, 'day').format('YYYY-MM-DD HH:mm:ss'),
-      updatedAt: startDate.subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
-      signedAt: status === 'signed' || status === 'active' ? startDate.format('YYYY-MM-DD HH:mm:ss') : undefined,
-      archivedAt: status === 'archived' ? dayjs().format('YYYY-MM-DD HH:mm:ss') : undefined
-    }
-    
-    if (status === 'pending_approval' || status === 'approved' || status === 'signed' || status === 'active') {
-      contract.approvalSteps = generateContractApprovalSteps(contract)
-      if (contract.approvalSteps.length > 0 && status === 'pending_approval') {
-        const pendingStep = contract.approvalSteps.find(s => s.status === 'pending')
-        contract.currentApprovalStep = pendingStep ? pendingStep.stepOrder : 0
-      }
-    }
-    
-    contract.signatories = status === 'signed' || status === 'active' 
-      ? generateContractSignatories(contract.id, user.name).map(s => ({ ...s, status: 'signed' as const, signedAt: startDate.add(1, 'day').format('YYYY-MM-DD HH:mm:ss') }))
-      : generateContractSignatories(contract.id, user.name)
-    
-    contracts.push(contract)
-  })
-  
-  return contracts
-}
-
-export const mockContracts: WorkerContract[] = generateMockContracts()
-
-export const mockContractReminders: ContractReminder[] = (() => {
-  const reminders: ContractReminder[] = []
-  const activeContracts = mockContracts.filter(c => c.status === 'active' || c.status === 'signed')
-  
-  activeContracts.forEach((contract, index) => {
-    if (contract.endDate) {
-      const endDate = dayjs(contract.endDate)
-      const daysRemaining = endDate.diff(dayjs(), 'day')
-      
-      if (daysRemaining <= 90 && daysRemaining > 0) {
-        reminders.push({
-          id: index + 1,
-          contractId: contract.id,
-          contractNo: contract.contractNo,
-          userName: contract.userName,
-          departmentName: contract.workInfo.departmentName,
-          type: daysRemaining <= 30 ? 'expiration' : 'renewal',
-          reminderDate: endDate.subtract(30, 'day').format('YYYY-MM-DD'),
-          daysRemaining,
-          handled: false,
-          createdAt: dayjs().subtract(Math.floor(Math.random() * 10), 'day').format('YYYY-MM-DD HH:mm:ss')
-        })
-      }
-    }
-    
-    if (contract.workInfo.probationPeriod) {
-      const probationEnd = dayjs(contract.startDate).add(contract.workInfo.probationPeriod, 'month')
-      const daysRemaining = probationEnd.diff(dayjs(), 'day')
-      
-      if (daysRemaining <= 15 && daysRemaining > 0) {
-        reminders.push({
-          id: reminders.length + 1,
-          contractId: contract.id,
-          contractNo: contract.contractNo,
-          userName: contract.userName,
-          departmentName: contract.workInfo.departmentName,
-          type: 'probation_end',
-          reminderDate: probationEnd.subtract(7, 'day').format('YYYY-MM-DD'),
-          daysRemaining,
-          handled: false,
-          createdAt: dayjs().subtract(Math.floor(Math.random() * 5), 'day').format('YYYY-MM-DD HH:mm:ss')
-        })
-      }
-    }
-  })
-  
-  return reminders
-})()
-
 export const mockContractApprovalFlows: ContractApprovalFlowConfig[] = [
   {
     id: 1,
@@ -1773,6 +1507,274 @@ export const approvalOperatorMap: Record<string, string> = {
   in: '包含',
   not_in: '不包含'
 }
+
+function evaluateCondition(condition: any, contract: any): boolean {
+  const { type, operator, value } = condition
+  let actualValue: any
+  
+  switch (type) {
+    case 'amount':
+      actualValue = contract.salaryInfo?.baseSalary || 0
+      break
+    case 'contract_type':
+      actualValue = contract.type
+      break
+    case 'department':
+      actualValue = contract.workInfo?.departmentId
+      break
+    case 'probation':
+      actualValue = contract.workInfo?.probationPeriod || 0
+      break
+    default:
+      return true
+  }
+  
+  switch (operator) {
+    case 'gt': return actualValue > value
+    case 'gte': return actualValue >= value
+    case 'lt': return actualValue < value
+    case 'lte': return actualValue <= value
+    case 'eq': return actualValue === value
+    case 'in': return Array.isArray(value) && value.includes(actualValue)
+    case 'not_in': return Array.isArray(value) && !value.includes(actualValue)
+    default: return true
+  }
+}
+
+function getApproverByRole(role: string, departmentId?: number): { id: number; name: string } {
+  const roleUserMap: Record<string, { id: number; name: string }> = {
+    manager: departmentId === 2 
+      ? { id: 62, name: '赵明' }
+      : { id: 3, name: '张伟' },
+    hr_admin: { id: 2, name: '李华' },
+    legal: { id: 60, name: '陈静' },
+    finance: { id: 61, name: '刘强' },
+    super_admin: { id: 1, name: '超级管理员' },
+    admin: { id: 1, name: '超级管理员' }
+  }
+  return roleUserMap[role] || { id: 1, name: '超级管理员' }
+}
+
+function generateContractApprovalSteps(contract: any): ApprovalStep[] {
+  const flow = mockContractApprovalFlows.find(f => f.contractType === contract.type) 
+    || mockContractApprovalFlows.find(f => f.isDefault)
+  if (!flow) return []
+  
+  const effectiveSteps: any[] = []
+  
+  flow.steps.forEach(stepConfig => {
+    if (stepConfig.conditions && stepConfig.conditions.length > 0) {
+      const allConditionsMet = stepConfig.conditions.every(cond => evaluateCondition(cond, contract))
+      if (!allConditionsMet) return
+    }
+    effectiveSteps.push(stepConfig)
+  })
+  
+  const steps: ApprovalStep[] = []
+  
+  effectiveSteps.forEach((stepConfig, effectiveIndex) => {
+    const approver = getApproverByRole(stepConfig.role, contract.workInfo?.departmentId)
+    const now = dayjs()
+    const deadline = stepConfig.deadlineHours 
+      ? now.add(stepConfig.deadlineHours, 'hour').format('YYYY-MM-DD HH:mm:ss')
+      : undefined
+    
+    const isBeforePending = contract.status === 'pending_approval' && effectiveIndex < 1
+    const isPending = contract.status === 'pending_approval' && effectiveIndex === 1
+    
+    steps.push({
+      id: contract.id * 100 + effectiveIndex + 1,
+      stepOrder: effectiveIndex + 1,
+      stepName: stepConfig.stepName,
+      approverId: approver.id,
+      approverName: approver.name,
+      approverRole: stepConfig.role,
+      approverRoleName: stepConfig.roleName,
+      mode: stepConfig.mode,
+      status: isBeforePending ? 'approved' : (isPending ? 'pending' : 'pending'),
+      comment: isBeforePending ? '信息审核通过，同意提交' : '',
+      approvedAt: isBeforePending 
+        ? dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'hour').format('YYYY-MM-DD HH:mm:ss')
+        : undefined,
+      deadline,
+      canDelegate: stepConfig.canDelegate,
+      canReturn: stepConfig.canReturn,
+      canAddSign: stepConfig.canAddSign
+    } as any)
+  })
+  
+  return steps
+}
+
+function generateContractSignatories(contractId: number, userName: string): ContractSignatory[] {
+  return [
+    {
+      id: contractId * 100 + 1,
+      userId: 2,
+      userName: '李华',
+      role: 'hr',
+      signatureData: undefined,
+      signedAt: undefined,
+      status: 'pending'
+    },
+    {
+      id: contractId * 100 + 2,
+      userId: 0,
+      userName: userName,
+      role: 'employee',
+      signatureData: undefined,
+      signedAt: undefined,
+      status: 'pending'
+    }
+  ]
+}
+
+function generateMockContracts(): WorkerContract[] {
+  const contracts: WorkerContract[] = []
+  const activeEmployees = mockUsers.filter(u => u.status === 'active' && u.role === 'employee')
+  
+  const statuses: ContractStatus[] = ['active', 'active', 'active', 'signed', 'pending_approval', 'expired', 'draft']
+  
+  activeEmployees.forEach((user, index) => {
+    const startDate = dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'month')
+    const termMonths = [12, 24, 36][Math.floor(Math.random() * 3)]
+    const endDate = startDate.add(termMonths, 'month')
+    const status = statuses[index % statuses.length]
+    
+    const contract: WorkerContract = {
+      id: index + 1,
+      contractNo: `HT${dayjs().format('YYYY')}${String(index + 1).padStart(5, '0')}`,
+      templateId: 1,
+      templateName: '标准劳动合同模板',
+      type: 'fixed_term',
+      status,
+      
+      userId: user.id,
+      userName: user.name,
+      userIdCard: user.idCard,
+      userPhone: user.phone,
+      userEmail: user.email,
+      userAddress: '北京市朝阳区某某路某某号',
+      
+      workInfo: {
+        position: user.position,
+        departmentId: user.departmentId,
+        departmentName: user.departmentName,
+        workLocation: '北京市',
+        workHours: '09:00-18:00',
+        workDays: '周一至周五',
+        probationPeriod: 3,
+        probationSalary: 6000
+      },
+      
+      salaryInfo: {
+        baseSalary: 8000 + Math.floor(Math.random() * 12000),
+        performanceSalary: 2000 + Math.floor(Math.random() * 3000),
+        overtimeSalary: 0,
+        bonus: 5000,
+        allowance: 1000,
+        socialSecurityBase: 8000,
+        housingFundBase: 8000,
+        payCycle: 'monthly',
+        payDay: 15
+      },
+      
+      startDate: startDate.format('YYYY-MM-DD'),
+      endDate: endDate.format('YYYY-MM-DD'),
+      termMonths,
+      
+      renewalCount: Math.floor(Math.random() * 2),
+      lastRenewalDate: undefined,
+      nextRenewalDate: endDate.subtract(1, 'month').format('YYYY-MM-DD'),
+      expirationReminderSent: Math.random() > 0.5,
+      
+      content: undefined,
+      attachments: [],
+      
+      approvalSteps: [],
+      currentApprovalStep: 0,
+      signatories: [] as any,
+      
+      remarks: '',
+      terminationReason: undefined,
+      terminatedAt: undefined,
+      
+      createdBy: 2,
+      createdByName: '李华',
+      createdAt: startDate.subtract(3, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      updatedAt: startDate.subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      signedAt: status === 'signed' || status === 'active' ? startDate.format('YYYY-MM-DD HH:mm:ss') : undefined,
+      archivedAt: status === 'archived' ? dayjs().format('YYYY-MM-DD HH:mm:ss') : undefined
+    }
+    
+    if (status === 'pending_approval' || status === 'approved' || status === 'signed' || status === 'active') {
+      contract.approvalSteps = generateContractApprovalSteps(contract)
+      if (contract.approvalSteps.length > 0 && status === 'pending_approval') {
+        const pendingStep = contract.approvalSteps.find(s => s.status === 'pending')
+        contract.currentApprovalStep = pendingStep ? pendingStep.stepOrder : 0
+      }
+    }
+    
+    contract.signatories = status === 'signed' || status === 'active' 
+      ? generateContractSignatories(contract.id, user.name).map(s => ({ ...s, status: 'signed' as const, signedAt: startDate.add(1, 'day').format('YYYY-MM-DD HH:mm:ss') }))
+      : generateContractSignatories(contract.id, user.name)
+    
+    contracts.push(contract)
+  })
+  
+  return contracts
+}
+
+export const mockContracts: WorkerContract[] = generateMockContracts()
+
+export const mockContractReminders: ContractReminder[] = (() => {
+  const reminders: ContractReminder[] = []
+  const activeContracts = mockContracts.filter(c => c.status === 'active' || c.status === 'signed')
+  
+  activeContracts.forEach((contract, index) => {
+    if (contract.endDate) {
+      const endDate = dayjs(contract.endDate)
+      const daysRemaining = endDate.diff(dayjs(), 'day')
+      
+      if (daysRemaining <= 90 && daysRemaining > 0) {
+        reminders.push({
+          id: index + 1,
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          userName: contract.userName,
+          departmentName: contract.workInfo.departmentName,
+          type: daysRemaining <= 30 ? 'expiration' : 'renewal',
+          reminderDate: endDate.subtract(30, 'day').format('YYYY-MM-DD'),
+          daysRemaining,
+          handled: false,
+          createdAt: dayjs().subtract(Math.floor(Math.random() * 10), 'day').format('YYYY-MM-DD HH:mm:ss')
+        })
+      }
+    }
+    
+    if (contract.workInfo.probationPeriod) {
+      const probationEnd = dayjs(contract.startDate).add(contract.workInfo.probationPeriod, 'month')
+      const daysRemaining = probationEnd.diff(dayjs(), 'day')
+      
+      if (daysRemaining <= 15 && daysRemaining > 0) {
+        reminders.push({
+          id: reminders.length + 1,
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          userName: contract.userName,
+          departmentName: contract.workInfo.departmentName,
+          type: 'probation_end',
+          reminderDate: probationEnd.subtract(7, 'day').format('YYYY-MM-DD'),
+          daysRemaining,
+          handled: false,
+          createdAt: dayjs().subtract(Math.floor(Math.random() * 5), 'day').format('YYYY-MM-DD HH:mm:ss')
+        })
+      }
+    }
+  })
+  
+  return reminders
+})()
 
 export function getContractStats() {
   const total = mockContracts.length

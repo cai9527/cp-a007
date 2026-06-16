@@ -383,7 +383,12 @@ function generateApprovalStepsForContract(contract: any): any[] {
       status: 'pending',
       comment: '',
       approvedAt: undefined,
-      deadline
+      deadline,
+      canDelegate: stepConfig.canDelegate,
+      canReturn: stepConfig.canReturn,
+      canAddSign: stepConfig.canAddSign,
+      requireComment: stepConfig.requireComment,
+      conditions: stepConfig.conditions
     })
     
     effectiveStepOrder++

@@ -1,12 +1,11 @@
 <template>
   <div class="user-management">
-    <div class="page-card">
-      <div class="page-header">
-        <h2>用户管理</h2>
+    <PageCard title="用户管理">
+      <template #header-actions>
         <el-button type="primary" icon="el-icon-plus" @click="handleAdd" v-if="canCreate">新增员工</el-button>
-      </div>
+      </template>
 
-      <div class="filter-bar">
+      <FilterBar>
         <el-input
           v-model="filters.keyword"
           placeholder="搜索姓名/用户名/手机号/邮箱"
@@ -27,21 +26,25 @@
         </el-select>
         <el-button type="primary" icon="el-icon-search" @click="loadData">搜索</el-button>
         <el-button icon="el-icon-refresh" @click="resetFilters">重置</el-button>
-      </div>
+      </FilterBar>
 
-      <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%;">
-        <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column label="员工信息" min-width="200">
-          <template slot-scope="scope">
-            <div class="user-info-cell">
-              <span class="avatar-placeholder">{{ getInitials(scope.row.name) }}</span>
-              <div class="user-detail">
-                <div class="user-name">{{ scope.row.name }}</div>
-                <div class="user-username">{{ scope.row.username }}</div>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
+      <TablePagination
+        :page="pagination.page"
+        :page-size="pagination.pageSize"
+        :total="pagination.total"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+      >
+        <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%;">
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column label="员工信息" min-width="200">
+            <template slot-scope="scope">
+              <UserInfoCell
+                :name="scope.row.name"
+                :sub-label="scope.row.username"
+              />
+            </template>
+          </el-table-column>
         <el-table-column prop="departmentName" label="部门" width="120" />
         <el-table-column prop="position" label="职位" width="100" />
         <el-table-column label="角色" width="100">
@@ -72,20 +75,8 @@
             <el-button type="text" size="small" style="color: #F56C6C;" @click="handleDelete(scope.row)" v-if="canDelete">删除</el-button>
           </template>
         </el-table-column>
-      </el-table>
-
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model="pagination.page"
-          :page-sizes="[10, 20, 50, 100]"
-          :page-size="pagination.pageSize"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-        />
-      </div>
-    </div>
+      </TablePagination>
+    </PageCard>
 
     <el-dialog
       :title="dialogTitle"
@@ -172,9 +163,7 @@
     <el-dialog title="员工详情" :visible.sync="detailVisible" width="500px">
       <div class="user-detail-card" v-if="currentUser">
         <div class="detail-header">
-          <span class="avatar-placeholder" style="width: 60px; height: 60px; font-size: 20px;">
-            {{ getInitials(currentUser.name) }}
-          </span>
+          <AvatarPlaceholder :name="currentUser.name" size="large" />
           <div class="detail-basic">
             <h3>{{ currentUser.name }}</h3>
             <p>{{ currentUser.departmentName }} · {{ currentUser.position }}</p>
@@ -493,53 +482,32 @@ export default Vue.extend({
 
 <style lang="scss" scoped>
 .user-management {
-  .user-info-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .user-detail {
-      .user-name {
-        font-weight: 500;
-        color: #303133;
-      }
-      .user-username {
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
-
-  .pagination-wrapper {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-  }
-
   .user-detail-card {
     .detail-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #ebeef5;
-      margin-bottom: 20px;
+      @include flex-start;
+      gap: $spacing-base;
+      padding-bottom: $spacing-xl;
+      border-bottom: 1px solid $border-lighter;
+      margin-bottom: $spacing-xl;
 
       .detail-basic {
+        flex: 1;
         h3 {
-          margin: 0 0 6px 0;
-          font-size: 18px;
+          margin: 0 0 $spacing-xs 0;
+          font-size: $font-size-large;
+          font-weight: $font-weight-semi-bold;
+          color: $text-primary;
         }
         p {
-          margin: 0 0 8px 0;
-          color: #606266;
-          font-size: 13px;
+          margin: 0 0 $spacing-sm 0;
+          color: $text-regular;
+          font-size: $font-size-small;
         }
       }
     }
 
     .detail-desc {
-      margin-top: 16px;
+      margin-top: $spacing-base;
     }
   }
 }

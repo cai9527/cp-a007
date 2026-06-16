@@ -1,0 +1,131 @@
+
+// ============================================
+// 样式变量体系 - 统一管理所有设计token
+// ============================================
+
+// ---------- 颜色系统 ----------
+// 品牌主色
+$color-primary: #409EFF;
+$color-primary-light: #79bbff;
+$color-primary-lighter: #a0cfff;
+$color-primary-dark: #337ecc;
+
+// 语义色
+$color-success: #67C23A;
+$color-success-light: #95d475;
+$color-success-lighter: #b3e19d;
+$color-success-dark: #529b2e;
+
+$color-warning: #E6A23C;
+$color-warning-light: #eebe77;
+$color-warning-lighter: #f3d19e;
+$color-warning-dark: #b88230;
+
+$color-danger: #F56C6C;
+$color-danger-light: #f89898;
+$color-danger-lighter: #fab6b6;
+$color-danger-dark: #c45656;
+
+$color-info: #909399;
+$color-info-light: #b1b3b8;
+$color-info-lighter: #d3d4d6;
+$color-info-dark: #73767a;
+
+// 中性色（文本）
+$text-primary: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #C0C4CC;
+
+// 中性色（边框）
+$border-base: #DCDFE6;
+$border-light: #E4E7ED;
+$border-lighter: #EBEEF5;
+$border-extra-light: #F2F6FC;
+
+// 中性色（背景）
+$bg-page: #f0f2f5;
+$bg-container: #ffffff;
+$bg-sub-container: #fafafa;
+$bg-hover: #f5f7fa;
+
+// 布局色
+$sidebar-bg: #001529;
+$sidebar-bg-sub: #000c17;
+$sidebar-text: #bfcbd9;
+$sidebar-text-active: #ffffff;
+$sidebar-bg-active: #1890ff;
+$header-bg: #ffffff;
+
+// ---------- 字体系统 ----------
+$font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+  'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
+
+$font-size-extra-small: 12px;
+$font-size-small: 13px;
+$font-size-base: 14px;
+$font-size-medium: 16px;
+$font-size-large: 18px;
+$font-size-extra-large: 20px;
+
+$font-weight-thin: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semi-bold: 600;
+$font-weight-bold: 700;
+
+// ---------- 间距系统（8px网格） ----------
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-base: 16px;
+$spacing-lg: 20px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
+$spacing-3xl: 40px;
+
+// ---------- 圆角系统 ----------
+$radius-none: 0;
+$radius-sm: 2px;
+$radius-base: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+$radius-round: 20px;
+$radius-circle: 50%;
+
+// ---------- 阴影系统 ----------
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+$shadow-base: 0 1px 4px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+// ---------- 尺寸系统 ----------
+$sidebar-width: 220px;
+$sidebar-width-collapsed: 64px;
+$header-height: 60px;
+
+// ---------- 过渡动画 ----------
+$transition-fast: 0.15s ease;
+$transition-base: 0.2s ease;
+$transition-slow: 0.3s ease;
+
+// ---------- 业务状态色映射 ----------
+$status-colors: (
+  normal: $color-success,
+  late: $color-warning,
+  early: $color-warning,
+  absent: $color-danger,
+  leave: $color-primary,
+  business_trip: $color-info
+);
+
+$attendance-status-bg: (
+  normal: #f0f9eb,
+  late: #fdf6ec,
+  early: #faecd8,
+  absent: #fef0f0,
+  leave: #ecf5ff,
+  business_trip: #f4f4f5
+);

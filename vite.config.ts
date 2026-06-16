@@ -10,6 +10,16 @@ export default defineConfig({
     },
     extensions: ['.ts', '.js', '.vue', '.json']
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `
+          @use "@/styles/variables" as *;
+          @use "@/styles/mixins" as *;
+        `
+      }
+    }
+  },
   server: {
     port: 5180,
     host: '0.0.0.0'

@@ -1,0 +1,146 @@
+
+// ============================================
+// 通用工具类样式 - Utilities
+// ============================================
+
+@use 'variables' as *;
+
+// ---------- 文本颜色 ----------
+.text-primary { color: $color-primary !important; }
+.text-success { color: $color-success !important; }
+.text-warning { color: $color-warning !important; }
+.text-danger { color: $color-danger !important; }
+.text-info { color: $color-info !important; }
+
+.text-primary-text { color: $text-primary !important; }
+.text-regular { color: $text-regular !important; }
+.text-secondary { color: $text-secondary !important; }
+.text-placeholder { color: $text-placeholder !important; }
+
+// ---------- 文本对齐 ----------
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+// ---------- 字体粗细 ----------
+.font-thin { font-weight: $font-weight-thin; }
+.font-normal { font-weight: $font-weight-normal; }
+.font-medium { font-weight: $font-weight-medium; }
+.font-semibold { font-weight: $font-weight-semi-bold; }
+.font-bold { font-weight: $font-weight-bold; }
+
+// ---------- 字体大小 ----------
+.text-xs { font-size: $font-size-extra-small; }
+.text-sm { font-size: $font-size-small; }
+.text-base { font-size: $font-size-base; }
+.text-lg { font-size: $font-size-large; }
+.text-xl { font-size: $font-size-extra-large; }
+
+// ---------- 间距工具类（基于8px网格）----------
+// Margin
+.m-0 { margin: 0; }
+.m-xs { margin: $spacing-xs; }
+.m-sm { margin: $spacing-sm; }
+.m-md { margin: $spacing-md; }
+.m-base { margin: $spacing-base; }
+.m-lg { margin: $spacing-lg; }
+.m-xl { margin: $spacing-xl; }
+.m-2xl { margin: $spacing-2xl; }
+
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: $spacing-xs; }
+.mt-sm { margin-top: $spacing-sm; }
+.mt-md { margin-top: $spacing-md; }
+.mt-base { margin-top: $spacing-base; }
+.mt-lg { margin-top: $spacing-lg; }
+.mt-xl { margin-top: $spacing-xl; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: $spacing-xs; }
+.mb-sm { margin-bottom: $spacing-sm; }
+.mb-md { margin-bottom: $spacing-md; }
+.mb-base { margin-bottom: $spacing-base; }
+.mb-lg { margin-bottom: $spacing-lg; }
+.mb-xl { margin-bottom: $spacing-xl; }
+
+.ml-0 { margin-left: 0; }
+.ml-xs { margin-left: $spacing-xs; }
+.ml-sm { margin-left: $spacing-sm; }
+.ml-md { margin-left: $spacing-md; }
+.ml-base { margin-left: $spacing-base; }
+.ml-lg { margin-left: $spacing-lg; }
+.ml-xl { margin-left: $spacing-xl; }
+
+.mr-0 { margin-right: 0; }
+.mr-xs { margin-right: $spacing-xs; }
+.mr-sm { margin-right: $spacing-sm; }
+.mr-md { margin-right: $spacing-md; }
+.mr-base { margin-right: $spacing-base; }
+.mr-lg { margin-right: $spacing-lg; }
+.mr-xl { margin-right: $spacing-xl; }
+
+// Padding
+.p-0 { padding: 0; }
+.p-xs { padding: $spacing-xs; }
+.p-sm { padding: $spacing-sm; }
+.p-md { padding: $spacing-md; }
+.p-base { padding: $spacing-base; }
+.p-lg { padding: $spacing-lg; }
+.p-xl { padding: $spacing-xl; }
+.p-2xl { padding: $spacing-2xl; }
+
+.pt-0 { padding-top: 0; }
+.pt-xs { padding-top: $spacing-xs; }
+.pt-sm { padding-top: $spacing-sm; }
+.pt-md { padding-top: $spacing-md; }
+.pt-base { padding-top: $spacing-base; }
+.pt-lg { padding-top: $spacing-lg; }
+.pt-xl { padding-top: $spacing-xl; }
+
+.pb-0 { padding-bottom: 0; }
+.pb-xs { padding-bottom: $spacing-xs; }
+.pb-sm { padding-bottom: $spacing-sm; }
+.pb-md { padding-bottom: $spacing-md; }
+.pb-base { padding-bottom: $spacing-base; }
+.pb-lg { padding-bottom: $spacing-lg; }
+.pb-xl { padding-bottom: $spacing-xl; }
+
+// ---------- Display ----------
+.block { display: block; }
+.inline-block { display: inline-block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.hidden { display: none; }
+
+// ---------- Flex属性 ----------
+.flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+.flex-grow-0 { flex-grow: 0; }
+
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+.gap-xs { gap: $spacing-xs; }
+.gap-sm { gap: $spacing-sm; }
+.gap-md { gap: $spacing-md; }
+.gap-base { gap: $spacing-base; }
+.gap-lg { gap: $spacing-lg; }
+
+// ---------- 定位 ----------
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }

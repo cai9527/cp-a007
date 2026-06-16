@@ -84,7 +84,11 @@
       custom-class="message-dialog"
       :close-on-click-modal="true"
       :modal="true"
+      :modal-append-to-body="false"
       append-to-body
+      :close-on-press-escape="true"
+      :show-close="true"
+      @close="handleDialogClose"
     >
       <div class="message-dialog-content">
         <div class="message-tabs">
@@ -131,8 +135,8 @@
         </div>
       </div>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="goToAlertsPage">查看全部</el-button>
-        <el-button type="primary" @click="messageDialogVisible = false">关闭</el-button>
+        <el-button @click.native="handleViewAll">查看全部</el-button>
+        <el-button type="primary" @click.native="handleCloseDialog">关闭</el-button>
       </div>
     </el-dialog>
   </el-container>
@@ -281,13 +285,23 @@ export default Vue.extend({
         this.messageLoading = false
       }
     },
-    goToAlertsPage() {
+    handleCloseDialog() {
       this.messageDialogVisible = false
-      this.goToAlerts()
+    },
+    handleDialogClose() {
+      this.messageDialogVisible = false
+    },
+    handleViewAll() {
+      this.messageDialogVisible = false
+      this.$nextTick(() => {
+        this.goToAlerts()
+      })
     },
     handleMessageClick(item: AlertRecord) {
       this.messageDialogVisible = false
-      this.$router.push('/alerts')
+      this.$nextTick(() => {
+        this.$router.push('/alerts')
+      })
     },
     getMessageIcon(type: string): string {
       const map: Record<string, string> = {
@@ -583,6 +597,201 @@ export default Vue.extend({
       cursor: pointer;
       transition: background-color 0.2s;
       border-bottom: 1px solid #f5f7fa;
+
+      &:hover {
+        background-color: #f5f7fa;
+      }
+
+      &.unread {
+        background-color: #ecf5ff;
+
+        &:hover {
+          background-color: #d9ecff;
+        }
+
+        .message-icon {
+          background: linear-gradient(135deg, #409EFF, #36cfc9);
+        }
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .message-icon {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: #f0f2f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #909399;
+        font-size: 18px;
+      }
+
+      .message-info {
+        flex: 1;
+        min-width: 0;
+
+        .message-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 4px;
+
+          .message-type-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+
+            &.tag-warning {
+              background: #fdf6ec;
+              color: #E6A23C;
+            }
+
+            &.tag-danger {
+              background: #fef0f0;
+              color: #F56C6C;
+            }
+
+            &.tag-info {
+              background: #ecf5ff;
+              color: #409EFF;
+            }
+          }
+
+          .message-time {
+            font-size: 12px;
+            color: #909399;
+            flex-shrink: 0;
+          }
+        }
+
+        .message-user {
+          font-size: 13px;
+          color: #606266;
+          margin-bottom: 4px;
+        }
+
+        .message-desc {
+          font-size: 13px;
+          color: #606266;
+          line-height: 1.5;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+      }
+
+      .message-status {
+        flex-shrink: 0;
+        align-self: center;
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss">
+.message-dialog {
+  .el-dialog__body {
+    padding: 0 !important;
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .el-dialog__footer {
+    padding: 16px 20px;
+    border-top: 1px solid #ebeef5;
+    background-color: #fff;
+    position: relative;
+    z-index: 10;
+  }
+}
+
+.message-dialog-content {
+  .message-tabs {
+    display: flex;
+    border-bottom: 1px solid #ebeef5;
+    padding: 0 20px;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+
+    .message-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #606266;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+
+      i {
+        font-size: 16px;
+      }
+
+      &:hover {
+        color: #409EFF;
+      }
+
+      &.active {
+        color: #409EFF;
+        border-bottom-color: #409EFF;
+        font-weight: 500;
+      }
+
+      .tab-badge {
+        margin-left: 4px;
+      }
+    }
+  }
+
+  .message-list {
+    max-height: none;
+    overflow: visible;
+    padding: 8px 0;
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: #909399;
+
+      i {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+
+    .message-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      border-bottom: 1px solid #f5f7fa;
+      user-select: none;
 
       &:hover {
         background-color: #f5f7fa;

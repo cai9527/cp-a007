@@ -20,7 +20,17 @@ import type {
   SalaryStatistics,
   SocialSecurityConfig,
   TaxConfig,
-  SalaryCalculationParams
+  SalaryCalculationParams,
+  ContractTemplate,
+  WorkerContract,
+  ContractReminder,
+  ContractApprovalFlowConfig,
+  ContractType,
+  ContractStatus,
+  ContractWorkInfo,
+  ContractSalaryInfo,
+  ApprovalStep,
+  ContractSignatory
 } from '@/types'
 
 export const mockDepartments: Department[] = [
@@ -441,7 +451,7 @@ export const mockRoles: Role[] = [
     id: 3,
     name: 'HR管理员',
     code: 'hr_admin',
-    description: '工资管理、薪资计算、工资报表、员工薪资档案',
+    description: '工资管理、薪资计算、工资报表、员工薪资档案、合同管理',
     permissions: [
       'dashboard',
       'user:view',
@@ -454,7 +464,12 @@ export const mockRoles: Role[] = [
       'salary:record:view', 'salary:record:edit',
       'salary:statistics:view',
       'salary:report:view', 'salary:report:export',
-      'salary:payslip:view', 'salary:payslip:export'
+      'salary:payslip:view', 'salary:payslip:export',
+      'contract:view', 'contract:create', 'contract:edit', 'contract:delete',
+      'contract:submit', 'contract:approval',
+      'contract:template:view', 'contract:template:create', 'contract:template:edit', 'contract:template:delete',
+      'contract:renew', 'contract:terminate', 'contract:archive',
+      'contract:reminder', 'contract:sign'
     ],
     createdAt: '2024-01-01 09:00:00',
     updatedAt: '2024-01-01 09:00:00'
@@ -1025,4 +1040,376 @@ export function calculateSalary(params: SalaryCalculationParams): SalaryRecord[]
   })
   
   return records
+}
+
+export const contractTypeMap: Record<ContractType, string> = {
+  fixed_term: '固定期限',
+  open_ended: '无固定期限',
+  part_time: '非全日制',
+  probation: '试用期',
+  project: '项目制'
+}
+
+export const contractStatusMap: Record<ContractStatus, string> = {
+  draft: '草稿',
+  pending_approval: '待审核',
+  approved: '已通过',
+  rejected: '已拒绝',
+  signed: '已签署',
+  active: '履行中',
+  expired: '已到期',
+  terminated: '已终止',
+  archived: '已归档'
+}
+
+export const contractStatusTagMap: Record<ContractStatus, string> = {
+  draft: 'info',
+  pending_approval: 'warning',
+  approved: 'success',
+  rejected: 'danger',
+  signed: 'success',
+  active: 'success',
+  expired: 'info',
+  terminated: 'danger',
+  archived: 'info'
+}
+
+export const mockContractTemplates: ContractTemplate[] = [
+  {
+    id: 1,
+    name: '标准劳动合同模板',
+    code: 'STD_LABOR_001',
+    type: 'fixed_term',
+    version: 'v1.0',
+    content: `甲方（用人单位）：____________________
+法定代表人：____________________
+地址：____________________
+
+乙方（劳动者）：____________________
+身份证号码：____________________
+地址：____________________
+
+根据《中华人民共和国劳动法》、《中华人民共和国劳动合同法》等法律法规的规定，甲乙双方本着平等自愿、协商一致、合法公平、诚实信用的原则，签订本劳动合同，并承诺共同遵守：
+
+一、合同期限
+本合同为固定期限劳动合同，合同期限自____年__月__日起至____年__月__日止。其中试用期为__个月，自____年__月__日起至____年__月__日止。
+
+二、工作内容和工作地点
+1. 乙方同意根据甲方工作需要，担任____岗位工作。
+2. 工作地点为：____________________
+
+三、工作时间和休息休假
+1. 甲方实行____工时制度。
+2. 乙方依法享有法定节假日、年休假、婚假、产假等假期。
+
+四、劳动报酬
+1. 乙方月工资为人民币____元。
+2. 甲方每月__日以货币形式支付乙方工资。
+
+五、社会保险和福利待遇
+甲乙双方必须依法参加社会保险，甲方按所在地规定的一定比例按月为乙方缴纳养老、医疗、工伤、失业、生育保险费，乙方个人负担的部分，由甲方代乙方在其工资中扣缴。
+
+六、劳动保护、劳动条件和职业危害防护
+甲方必须为乙方提供符合国家规定的劳动安全卫生条件和必要的劳动防护用品。
+
+七、劳动合同的解除和终止
+（一）经甲乙双方协商一致，可以解除本合同。
+（二）乙方有下列情形之一的，甲方可以随时解除本合同：
+1. 在试用期间被证明不符合录用条件的；
+2. 严重违反甲方规章制度的；
+3. 严重失职，营私舞弊，给甲方造成重大损害的；
+4. 劳动者同时与其他用人单位建立劳动关系，对完成本单位的工作任务造成严重影响，或者经用人单位提出，拒不改正的；
+5. 被依法追究刑事责任的。
+
+八、其他约定事项
+
+九、争议处理
+因履行本合同发生的劳动争议，双方可以协商解决；协商不成的，可以向甲方所在地劳动争议仲裁委员会申请仲裁。
+
+本合同一式两份，甲乙双方各执一份，自双方签字盖章之日起生效。
+
+甲方（盖章）：                    乙方（签字）：
+法定代表人：
+日期：____年__月__日              日期：____年__月__日`,
+    placeholderFields: [
+      'employer_name', 'employer_legal_rep', 'employer_address',
+      'employee_name', 'employee_id_card', 'employee_address',
+      'start_date', 'end_date', 'probation_months',
+      'position', 'work_location', 'work_hours',
+      'salary', 'pay_day'
+    ],
+    isDefault: true,
+    status: 'active',
+    createdBy: 1,
+    createdByName: '超级管理员',
+    createdAt: '2024-01-01 09:00:00',
+    updatedAt: '2024-01-15 10:30:00'
+  },
+  {
+    id: 2,
+    name: '无固定期限劳动合同模板',
+    code: 'OPEN_LABOR_001',
+    type: 'open_ended',
+    version: 'v1.0',
+    content: '无固定期限劳动合同模板内容...',
+    placeholderFields: [
+      'employer_name', 'employee_name', 'position', 'salary', 'start_date'
+    ],
+    isDefault: false,
+    status: 'active',
+    createdBy: 1,
+    createdByName: '超级管理员',
+    createdAt: '2024-02-01 09:00:00',
+    updatedAt: '2024-02-01 09:00:00'
+  },
+  {
+    id: 3,
+    name: '试用期劳动合同模板',
+    code: 'PROBATION_001',
+    type: 'probation',
+    version: 'v1.0',
+    content: '试用期劳动合同模板内容...',
+    placeholderFields: [
+      'employer_name', 'employee_name', 'position', 'probation_salary', 'probation_months'
+    ],
+    isDefault: false,
+    status: 'inactive',
+    createdBy: 1,
+    createdByName: '超级管理员',
+    createdAt: '2024-03-01 09:00:00',
+    updatedAt: '2024-03-10 14:00:00'
+  }
+]
+
+function generateContractApprovalSteps(contractId: number): ApprovalStep[] {
+  return [
+    {
+      id: contractId * 100 + 1,
+      stepOrder: 1,
+      approverId: 2,
+      approverName: '李华',
+      approverRole: 'HR主管',
+      status: 'approved',
+      comment: '合同信息完整，同意',
+      approvedAt: '2024-03-15 10:00:00'
+    },
+    {
+      id: contractId * 100 + 2,
+      stepOrder: 2,
+      approverId: 1,
+      approverName: '超级管理员',
+      approverRole: '超级管理员',
+      status: 'pending',
+      comment: '',
+      approvedAt: undefined
+    }
+  ]
+}
+
+function generateContractSignatories(contractId: number, userName: string): ContractSignatory[] {
+  return [
+    {
+      id: contractId * 100 + 1,
+      userId: 2,
+      userName: '李华',
+      role: 'hr',
+      signatureData: undefined,
+      signedAt: undefined,
+      status: 'pending'
+    },
+    {
+      id: contractId * 100 + 2,
+      userId: 0,
+      userName: userName,
+      role: 'employee',
+      signatureData: undefined,
+      signedAt: undefined,
+      status: 'pending'
+    }
+  ]
+}
+
+function generateMockContracts(): WorkerContract[] {
+  const contracts: WorkerContract[] = []
+  const activeEmployees = mockUsers.filter(u => u.status === 'active' && u.role === 'employee')
+  
+  const statuses: ContractStatus[] = ['active', 'active', 'active', 'signed', 'pending_approval', 'expired', 'draft']
+  
+  activeEmployees.forEach((user, index) => {
+    const startDate = dayjs().subtract(Math.floor(Math.random() * 24) + 1, 'month')
+    const termMonths = [12, 24, 36][Math.floor(Math.random() * 3)]
+    const endDate = startDate.add(termMonths, 'month')
+    const status = statuses[index % statuses.length]
+    
+    const contract: WorkerContract = {
+      id: index + 1,
+      contractNo: `HT${dayjs().format('YYYY')}${String(index + 1).padStart(5, '0')}`,
+      templateId: 1,
+      templateName: '标准劳动合同模板',
+      type: 'fixed_term',
+      status,
+      
+      userId: user.id,
+      userName: user.name,
+      userIdCard: user.idCard,
+      userPhone: user.phone,
+      userEmail: user.email,
+      userAddress: '北京市朝阳区某某路某某号',
+      
+      workInfo: {
+        position: user.position,
+        departmentId: user.departmentId,
+        departmentName: user.departmentName,
+        workLocation: '北京市',
+        workHours: '09:00-18:00',
+        workDays: '周一至周五',
+        probationPeriod: 3,
+        probationSalary: 6000
+      },
+      
+      salaryInfo: {
+        baseSalary: 8000 + Math.floor(Math.random() * 12000),
+        performanceSalary: 2000 + Math.floor(Math.random() * 3000),
+        overtimeSalary: 0,
+        bonus: 5000,
+        allowance: 1000,
+        socialSecurityBase: 8000,
+        housingFundBase: 8000,
+        payCycle: 'monthly',
+        payDay: 15
+      },
+      
+      startDate: startDate.format('YYYY-MM-DD'),
+      endDate: endDate.format('YYYY-MM-DD'),
+      termMonths,
+      
+      renewalCount: Math.floor(Math.random() * 2),
+      lastRenewalDate: undefined,
+      nextRenewalDate: endDate.subtract(1, 'month').format('YYYY-MM-DD'),
+      expirationReminderSent: Math.random() > 0.5,
+      
+      content: undefined,
+      attachments: [],
+      
+      approvalSteps: status === 'pending_approval' || status === 'approved' || status === 'signed' || status === 'active' 
+        ? generateContractApprovalSteps(index + 1) 
+        : [],
+      currentApprovalStep: status === 'pending_approval' ? 2 : 0,
+      signatories: status === 'signed' || status === 'active' 
+        ? generateContractSignatories(index + 1, user.name).map(s => ({ ...s, status: 'signed' as const, signedAt: startDate.add(1, 'day').format('YYYY-MM-DD HH:mm:ss') }))
+        : generateContractSignatories(index + 1, user.name),
+      
+      remarks: '',
+      terminationReason: undefined,
+      terminatedAt: undefined,
+      
+      createdBy: 2,
+      createdByName: '李华',
+      createdAt: startDate.subtract(3, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      updatedAt: startDate.subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'),
+      signedAt: status === 'signed' || status === 'active' ? startDate.format('YYYY-MM-DD HH:mm:ss') : undefined,
+      archivedAt: status === 'archived' ? dayjs().format('YYYY-MM-DD HH:mm:ss') : undefined
+    }
+    
+    contracts.push(contract)
+  })
+  
+  return contracts
+}
+
+export const mockContracts: WorkerContract[] = generateMockContracts()
+
+export const mockContractReminders: ContractReminder[] = (() => {
+  const reminders: ContractReminder[] = []
+  const activeContracts = mockContracts.filter(c => c.status === 'active' || c.status === 'signed')
+  
+  activeContracts.forEach((contract, index) => {
+    if (contract.endDate) {
+      const endDate = dayjs(contract.endDate)
+      const daysRemaining = endDate.diff(dayjs(), 'day')
+      
+      if (daysRemaining <= 90 && daysRemaining > 0) {
+        reminders.push({
+          id: index + 1,
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          userName: contract.userName,
+          departmentName: contract.workInfo.departmentName,
+          type: daysRemaining <= 30 ? 'expiration' : 'renewal',
+          reminderDate: endDate.subtract(30, 'day').format('YYYY-MM-DD'),
+          daysRemaining,
+          handled: false,
+          createdAt: dayjs().subtract(Math.floor(Math.random() * 10), 'day').format('YYYY-MM-DD HH:mm:ss')
+        })
+      }
+    }
+    
+    if (contract.workInfo.probationPeriod) {
+      const probationEnd = dayjs(contract.startDate).add(contract.workInfo.probationPeriod, 'month')
+      const daysRemaining = probationEnd.diff(dayjs(), 'day')
+      
+      if (daysRemaining <= 15 && daysRemaining > 0) {
+        reminders.push({
+          id: reminders.length + 1,
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          userName: contract.userName,
+          departmentName: contract.workInfo.departmentName,
+          type: 'probation_end',
+          reminderDate: probationEnd.subtract(7, 'day').format('YYYY-MM-DD'),
+          daysRemaining,
+          handled: false,
+          createdAt: dayjs().subtract(Math.floor(Math.random() * 5), 'day').format('YYYY-MM-DD HH:mm:ss')
+        })
+      }
+    }
+  })
+  
+  return reminders
+})()
+
+export const mockContractApprovalFlows: ContractApprovalFlowConfig[] = [
+  {
+    id: 1,
+    name: '标准合同审批流程',
+    contractType: 'fixed_term',
+    steps: [
+      { stepOrder: 1, role: 'hr_admin', roleName: 'HR管理员' },
+      { stepOrder: 2, role: 'super_admin', roleName: '超级管理员' }
+    ],
+    isDefault: true,
+    status: 'active',
+    createdAt: '2024-01-01 09:00:00',
+    updatedAt: '2024-01-01 09:00:00'
+  },
+  {
+    id: 2,
+    name: '无固定期限合同审批流程',
+    contractType: 'open_ended',
+    steps: [
+      { stepOrder: 1, role: 'hr_admin', roleName: 'HR管理员' },
+      { stepOrder: 2, role: 'admin', roleName: '系统管理员' },
+      { stepOrder: 3, role: 'super_admin', roleName: '超级管理员' }
+    ],
+    isDefault: false,
+    status: 'active',
+    createdAt: '2024-02-01 09:00:00',
+    updatedAt: '2024-02-01 09:00:00'
+  }
+]
+
+export function getContractStats() {
+  const total = mockContracts.length
+  const active = mockContracts.filter(c => c.status === 'active' || c.status === 'signed').length
+  const pending = mockContracts.filter(c => c.status === 'pending_approval').length
+  const expired = mockContracts.filter(c => c.status === 'expired').length
+  const expiringSoon = mockContractReminders.filter(r => r.type === 'expiration' && !r.handled).length
+  
+  return {
+    total,
+    active,
+    pending,
+    expired,
+    expiringSoon
+  }
 }

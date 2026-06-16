@@ -371,3 +371,145 @@ export interface TaxConfig {
   createdAt: string
   updatedAt: string
 }
+
+export type ContractType = 'fixed_term' | 'open_ended' | 'part_time' | 'probation' | 'project'
+export type ContractStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'signed' | 'active' | 'expired' | 'terminated' | 'archived'
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+
+export interface ContractTemplate {
+  id: number
+  name: string
+  code: string
+  type: ContractType
+  version: string
+  content: string
+  placeholderFields: string[]
+  isDefault: boolean
+  status: 'active' | 'inactive'
+  createdBy: number
+  createdByName: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContractSalaryInfo {
+  baseSalary: number
+  performanceSalary?: number
+  overtimeSalary?: number
+  bonus?: number
+  allowance?: number
+  socialSecurityBase?: number
+  housingFundBase?: number
+  payCycle: 'monthly' | 'weekly' | 'biweekly' | 'hourly'
+  payDay: number
+}
+
+export interface ContractWorkInfo {
+  position: string
+  departmentId: number
+  departmentName: string
+  workLocation: string
+  workHours: string
+  workDays: string
+  probationPeriod?: number
+  probationSalary?: number
+}
+
+export interface ApprovalStep {
+  id: number
+  stepOrder: number
+  approverId: number
+  approverName: string
+  approverRole: string
+  status: ApprovalStatus
+  comment?: string
+  approvedAt?: string
+}
+
+export interface ContractSignatory {
+  id: number
+  userId: number
+  userName: string
+  role: 'employee' | 'company_rep' | 'hr'
+  signatureData?: string
+  signedAt?: string
+  status: 'pending' | 'signed' | 'rejected'
+}
+
+export interface WorkerContract {
+  id: number
+  contractNo: string
+  templateId: number
+  templateName: string
+  type: ContractType
+  status: ContractStatus
+
+  userId: number
+  userName: string
+  userIdCard: string
+  userPhone: string
+  userEmail: string
+  userAddress: string
+
+  workInfo: ContractWorkInfo
+  salaryInfo: ContractSalaryInfo
+
+  startDate: string
+  endDate?: string
+  termMonths?: number
+
+  renewalCount: number
+  lastRenewalDate?: string
+  nextRenewalDate?: string
+  expirationReminderSent: boolean
+
+  content?: string
+  attachments?: { name: string; url: string; type: string }[]
+
+  approvalSteps: ApprovalStep[]
+  currentApprovalStep: number
+  signatories: ContractSignatory[]
+
+  remarks?: string
+  terminationReason?: string
+  terminatedAt?: string
+
+  createdBy: number
+  createdByName: string
+  createdAt: string
+  updatedAt: string
+  signedAt?: string
+  archivedAt?: string
+}
+
+export interface ContractReminder {
+  id: number
+  contractId: number
+  contractNo: string
+  userName: string
+  departmentName: string
+  type: 'expiration' | 'renewal' | 'probation_end'
+  reminderDate: string
+  daysRemaining: number
+  handled: boolean
+  handledBy?: number
+  handledAt?: string
+  createdAt: string
+}
+
+export interface ContractApprovalFlowConfig {
+  id: number
+  name: string
+  contractType: ContractType
+  steps: {
+    stepOrder: number
+    role: string
+    roleName: string
+    approverId?: number
+    approverName?: string
+  }[]
+  isDefault: boolean
+  status: 'active' | 'inactive'
+  createdAt: string
+  updatedAt: string
+}

@@ -44,6 +44,48 @@ export const asyncRoutes: RouteConfig[] = [
         meta: { title: '报表中心', icon: 'el-icon-s-marketing', permission: 'report:view:self' }
       },
       {
+        path: 'contract/list',
+        name: 'ContractList',
+        component: () => import('@/views/ContractList.vue'),
+        meta: { title: '合同列表', icon: 'el-icon-document-copy', permission: 'contract:view', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+      },
+      {
+        path: 'contract/templates',
+        name: 'ContractTemplates',
+        component: () => import('@/views/ContractTemplates.vue'),
+        meta: { title: '合同模板管理', icon: 'el-icon-tickets', permission: 'contract:template:view', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+      },
+      {
+        path: 'contract/approval',
+        name: 'ContractApproval',
+        component: () => import('@/views/ContractApproval.vue'),
+        meta: { title: '合同审核', icon: 'el-icon-edit-outline', permission: 'contract:approval', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+      },
+      {
+        path: 'contract/reminders',
+        name: 'ContractReminders',
+        component: () => import('@/views/ContractReminders.vue'),
+        meta: { title: '到期提醒', icon: 'el-icon-bell', permission: 'contract:reminder', roles: ['super_admin', 'hr_admin'], group: 'contract' }
+      },
+      {
+        path: 'contract/create',
+        name: 'ContractCreate',
+        component: () => import('@/views/ContractForm.vue'),
+        meta: { title: '新建合同', hidden: true, permission: 'contract:create', roles: ['super_admin', 'hr_admin'] }
+      },
+      {
+        path: 'contract/edit/:id',
+        name: 'ContractEdit',
+        component: () => import('@/views/ContractForm.vue'),
+        meta: { title: '编辑合同', hidden: true, permission: 'contract:edit', roles: ['super_admin', 'hr_admin'] }
+      },
+      {
+        path: 'contract/detail/:id',
+        name: 'ContractDetail',
+        component: () => import('@/views/ContractDetail.vue'),
+        meta: { title: '合同详情', hidden: true, permission: 'contract:view', roles: ['super_admin', 'hr_admin'] }
+      },
+      {
         path: 'salary/items',
         name: 'SalaryItems',
         component: () => import('@/views/SalaryItems.vue'),
@@ -94,6 +136,7 @@ export const asyncRoutes: RouteConfig[] = [
 ]
 
 export const groupConfig: Record<string, { title: string; icon: string }> = {
+  contract: { title: '合同管理', icon: 'el-icon-document' },
   salary: { title: '工资管理', icon: 'el-icon-money' }
 }
 

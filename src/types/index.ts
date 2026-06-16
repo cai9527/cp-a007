@@ -378,6 +378,28 @@ export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'delegated' |
 export type ApprovalMode = 'sequential' | 'countersign' | 'any_sign'
 export type ApprovalConditionType = 'amount' | 'contract_type' | 'department' | 'probation'
 
+export interface ApprovalPermissionError {
+  code: 'NOT_APPROVER' | 'NOT_PENDING' | 'CONTRACT_NOT_FOUND' | 'STEP_NOT_FOUND' | 'ALREADY_PROCESSED' | 'INSUFFICIENT_PERMISSION'
+  message: string
+  contractId?: number
+  stepOrder?: number
+}
+
+export interface BatchOperationResultItem {
+  contractId: number
+  contractNo: string
+  userName: string
+  success: boolean
+  error?: ApprovalPermissionError
+}
+
+export interface BatchOperationResult {
+  total: number
+  successCount: number
+  failureCount: number
+  items: BatchOperationResultItem[]
+}
+
 export interface ApprovalCondition {
   type: ApprovalConditionType
   operator: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'in' | 'not_in'

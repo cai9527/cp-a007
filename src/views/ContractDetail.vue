@@ -593,7 +593,8 @@ import {
   delegateApproval,
   returnApproval,
   addSignatory,
-  getApprovalTimeline
+  getApprovalTimeline,
+  ApprovalPermissionException
 } from '@/api/contract'
 import { 
   contractTypeMap, 
@@ -671,7 +672,7 @@ export default Vue.extend({
     }
   },
   computed: {
-    ...mapGetters(['isSalaryAdmin', 'hasPermission', 'user']),
+    ...mapGetters(['isSuperAdmin', 'isAdmin', 'isSalaryAdmin', 'hasPermission', 'user']),
     canEdit(): boolean {
       return this.hasPermission('contract:edit') || this.isSalaryAdmin
     },
@@ -850,11 +851,12 @@ export default Vue.extend({
     },
     isApprover(step?: ApprovalStep): boolean {
       if (!step || !this.user) return false
-      if (this.isSalaryAdmin) return true
+      if (step.status !== 'pending') return false
+      if (this.isSuperAdmin || this.isAdmin) return true
       if (step.approverId === this.user.id) return true
       if (step.approverRole === this.user.role) return true
       if (step.delegatedTo === this.user.id) return true
-      return this.hasPermission('contract:approval')
+      return false
     },
     canDelegate(step?: ApprovalStep): boolean {
       if (!step) return false
@@ -899,6 +901,15 @@ export default Vue.extend({
       const deadlineTime = dayjs(deadline)
       const diffHours = deadlineTime.diff(now, 'hour')
       return diffHours < 24
+    },
+    handleApprovalError(error: any): void {
+      if (error instanceof ApprovalPermissionException) {
+        this.$message.error(error.error.message)
+      } else if (error && error.message) {
+        this.$message.error(error.message)
+      } else {
+        this.$message.error('操作失败，请稍后重试')
+      }
     },
     handleAdvancedAction(command: string, step?: ApprovalStep) {
       if (!step) return
@@ -954,7 +965,7 @@ export default Vue.extend({
           this.loadApprovalTimeline()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        this.handleApprovalError(e)
       }
     },
     handleReturn() {
@@ -986,7 +997,7 @@ export default Vue.extend({
           this.loadApprovalTimeline()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        this.handleApprovalError(e)
       }
     },
     handleAddSign() {
@@ -1017,7 +1028,7 @@ export default Vue.extend({
           this.loadApprovalTimeline()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        this.handleApprovalError(e)
       }
     },
     async loadContract() {
@@ -1072,7 +1083,7 @@ export default Vue.extend({
             this.loadApprovalTimeline()
           }
         } catch (e) {
-          this.$message.error('操作失败')
+          this.handleApprovalError(e)
         }
       }).catch(() => {})
     },
@@ -1094,7 +1105,7 @@ export default Vue.extend({
             this.loadApprovalTimeline()
           }
         } catch (e) {
-          this.$message.error('操作失败')
+          this.handleApprovalError(e)
         }
       }).catch(() => {})
     },

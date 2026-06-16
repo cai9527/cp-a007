@@ -7,7 +7,10 @@ import type {
   PaginationParams,
   PaginatedResponse,
   ContractStatus,
-  ContractType
+  ContractType,
+  ApprovalPermissionError,
+  BatchOperationResult,
+  BatchOperationResultItem
 } from '@/types'
 import {
   mockContractTemplates,
@@ -18,6 +21,122 @@ import {
 } from '@/data/mockData'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function getCurrentUser(): { id: number; role: string; name: string } | null {
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      return { id: user.id, role: user.role, name: user.name }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
+function validateApprovalPermission(
+  contract: WorkerContract | undefined,
+  stepOrder: number,
+  operation: 'approve' | 'reject' | 'delegate' | 'return' | 'add_sign'
+): ApprovalPermissionError | null {
+  if (!contract) {
+    return {
+      code: 'CONTRACT_NOT_FOUND',
+      message: '合同不存在',
+      stepOrder
+    }
+  }
+
+  if (contract.status !== 'pending_approval') {
+    return {
+      code: 'NOT_PENDING',
+      message: `合同状态为「${contract.status}」，当前不处于待审核状态`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
+  if (!step) {
+    return {
+      code: 'STEP_NOT_FOUND',
+      message: `第${stepOrder}级审批节点不存在`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  if (step.status !== 'pending') {
+    return {
+      code: 'ALREADY_PROCESSED',
+      message: `第${stepOrder}级审批已处理，当前状态：${step.status}`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  const currentUser = getCurrentUser()
+  if (!currentUser) {
+    return {
+      code: 'INSUFFICIENT_PERMISSION',
+      message: '未获取到当前登录用户信息，请重新登录',
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  if (currentUser.role === 'super_admin' || currentUser.role === 'admin') {
+    return null
+  }
+
+  if (step.approverId !== currentUser.id 
+      && step.approverRole !== currentUser.role
+      && step.delegatedTo !== currentUser.id) {
+    return {
+      code: 'NOT_APPROVER',
+      message: `您不是第${stepOrder}级审批的审批人（该节点审批人：${step.approverName}），无权执行此操作`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  if (operation === 'delegate' && !step.canDelegate) {
+    return {
+      code: 'INSUFFICIENT_PERMISSION',
+      message: `第${stepOrder}级审批节点不支持委托操作`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+  if (operation === 'return' && !step.canReturn) {
+    return {
+      code: 'INSUFFICIENT_PERMISSION',
+      message: `第${stepOrder}级审批节点不支持退回操作`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+  if (operation === 'add_sign' && !step.canAddSign) {
+    return {
+      code: 'INSUFFICIENT_PERMISSION',
+      message: `第${stepOrder}级审批节点不支持加签操作`,
+      contractId: contract.id,
+      stepOrder
+    }
+  }
+
+  return null
+}
+
+export class ApprovalPermissionException extends Error {
+  error: ApprovalPermissionError
+  constructor(error: ApprovalPermissionError) {
+    super(error.message)
+    this.error = error
+    this.name = 'ApprovalPermissionException'
+  }
+}
 
 let templatesClone: ContractTemplate[] = JSON.parse(JSON.stringify(mockContractTemplates))
 let contractsClone: WorkerContract[] = JSON.parse(JSON.stringify(mockContracts))
@@ -290,6 +409,12 @@ export async function submitContractForApproval(id: number): Promise<WorkerContr
 export async function approveContract(id: number, stepOrder: number, comment?: string): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
+  
+  const permissionError = validateApprovalPermission(contract, stepOrder, 'approve')
+  if (permissionError) {
+    throw new ApprovalPermissionException(permissionError)
+  }
+  
   if (!contract) return null
   
   const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
@@ -314,6 +439,12 @@ export async function approveContract(id: number, stepOrder: number, comment?: s
 export async function rejectContract(id: number, stepOrder: number, comment?: string): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
+  
+  const permissionError = validateApprovalPermission(contract, stepOrder, 'reject')
+  if (permissionError) {
+    throw new ApprovalPermissionException(permissionError)
+  }
+  
   if (!contract) return null
   
   const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
@@ -492,6 +623,12 @@ export async function delegateApproval(
 ): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
+  
+  const permissionError = validateApprovalPermission(contract, stepOrder, 'delegate')
+  if (permissionError) {
+    throw new ApprovalPermissionException(permissionError)
+  }
+  
   if (!contract) return null
   
   const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
@@ -501,6 +638,7 @@ export async function delegateApproval(
   step.delegatedTo = delegateToUserId
   step.delegatedToName = delegateToUserName
   step.delegatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+  step.delegationReason = reason
   
   contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
   return contract
@@ -514,6 +652,12 @@ export async function returnApproval(
 ): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
+  
+  const permissionError = validateApprovalPermission(contract, stepOrder, 'return')
+  if (permissionError) {
+    throw new ApprovalPermissionException(permissionError)
+  }
+  
   if (!contract) return null
   
   const currentStep = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
@@ -546,6 +690,12 @@ export async function addSignatory(
 ): Promise<WorkerContract | null> {
   await delay(300)
   const contract = contractsClone.find(c => c.id === id)
+  
+  const permissionError = validateApprovalPermission(contract, stepOrder, 'add_sign')
+  if (permissionError) {
+    throw new ApprovalPermissionException(permissionError)
+  }
+  
   if (!contract) return null
   
   const step = contract.approvalSteps.find(s => s.stepOrder === stepOrder)
@@ -706,50 +856,147 @@ export async function getApprovalDelegations(): Promise<any[]> {
 export async function batchApproveContracts(
   ids: number[],
   comment?: string
-): Promise<WorkerContract[]> {
+): Promise<BatchOperationResult> {
   await delay(500)
-  const results: WorkerContract[] = []
+  const resultItems: BatchOperationResultItem[] = []
+  let successCount = 0
+
   for (const id of ids) {
     const contract = contractsClone.find(c => c.id === id)
-    if (!contract) continue
-    const currentStep = contract.approvalSteps.find(s => s.status === 'pending')
-    if (!currentStep) continue
-    currentStep.status = 'approved'
-    currentStep.comment = comment
-    currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
-    const nextStep = contract.approvalSteps.find(s => s.status === 'pending')
-    if (nextStep) {
-      contract.currentApprovalStep = nextStep.stepOrder
-    } else {
-      contract.status = 'approved'
-      contract.currentApprovalStep = 0
+    const currentStep = contract?.approvalSteps.find(s => s.status === 'pending')
+    const stepOrder = currentStep?.stepOrder || 0
+
+    const item: BatchOperationResultItem = {
+      contractId: id,
+      contractNo: contract?.contractNo || '未知',
+      userName: contract?.userName || '未知',
+      success: false
     }
-    contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
-    results.push(contract)
+
+    try {
+      const permissionError = validateApprovalPermission(contract, stepOrder, 'approve')
+      if (permissionError) {
+        item.error = permissionError
+        resultItems.push(item)
+        continue
+      }
+
+      if (!contract || !currentStep) {
+        item.error = {
+          code: contract ? 'NOT_PENDING' : 'CONTRACT_NOT_FOUND',
+          message: contract ? '合同当前没有待处理的审批节点' : '合同不存在',
+          contractId: id,
+          stepOrder
+        }
+        resultItems.push(item)
+        continue
+      }
+
+      currentStep.status = 'approved'
+      currentStep.comment = comment
+      currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+
+      const nextStep = contract.approvalSteps.find(s => s.status === 'pending')
+      if (nextStep) {
+        contract.currentApprovalStep = nextStep.stepOrder
+      } else {
+        contract.status = 'approved'
+        contract.currentApprovalStep = 0
+      }
+      contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+
+      item.success = true
+      successCount++
+      resultItems.push(item)
+    } catch (e: any) {
+      item.error = e instanceof ApprovalPermissionException
+        ? e.error
+        : {
+            code: 'INSUFFICIENT_PERMISSION',
+            message: e.message || '审批失败，发生未知错误',
+            contractId: id,
+            stepOrder
+          }
+      resultItems.push(item)
+    }
   }
-  return results
+
+  return {
+    total: ids.length,
+    successCount,
+    failureCount: ids.length - successCount,
+    items: resultItems
+  }
 }
 
 export async function batchRejectContracts(
   ids: number[],
   reason: string
-): Promise<WorkerContract[]> {
+): Promise<BatchOperationResult> {
   await delay(500)
-  const results: WorkerContract[] = []
+  const resultItems: BatchOperationResultItem[] = []
+  let successCount = 0
+
   for (const id of ids) {
     const contract = contractsClone.find(c => c.id === id)
-    if (!contract) continue
-    const currentStep = contract.approvalSteps.find(s => s.status === 'pending')
-    if (!currentStep) continue
-    currentStep.status = 'rejected'
-    currentStep.comment = reason
-    currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
-    contract.status = 'rejected'
-    contract.currentApprovalStep = 0
-    contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
-    results.push(contract)
+    const currentStep = contract?.approvalSteps.find(s => s.status === 'pending')
+    const stepOrder = currentStep?.stepOrder || 0
+
+    const item: BatchOperationResultItem = {
+      contractId: id,
+      contractNo: contract?.contractNo || '未知',
+      userName: contract?.userName || '未知',
+      success: false
+    }
+
+    try {
+      const permissionError = validateApprovalPermission(contract, stepOrder, 'reject')
+      if (permissionError) {
+        item.error = permissionError
+        resultItems.push(item)
+        continue
+      }
+
+      if (!contract || !currentStep) {
+        item.error = {
+          code: contract ? 'NOT_PENDING' : 'CONTRACT_NOT_FOUND',
+          message: contract ? '合同当前没有待处理的审批节点' : '合同不存在',
+          contractId: id,
+          stepOrder
+        }
+        resultItems.push(item)
+        continue
+      }
+
+      currentStep.status = 'rejected'
+      currentStep.comment = reason
+      currentStep.approvedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+      contract.status = 'rejected'
+      contract.currentApprovalStep = 0
+      contract.updatedAt = dayjs().format('YYYY-MM-DD HH:mm:ss')
+
+      item.success = true
+      successCount++
+      resultItems.push(item)
+    } catch (e: any) {
+      item.error = e instanceof ApprovalPermissionException
+        ? e.error
+        : {
+            code: 'INSUFFICIENT_PERMISSION',
+            message: e.message || '驳回失败，发生未知错误',
+            contractId: id,
+            stepOrder
+          }
+      resultItems.push(item)
+    }
   }
-  return results
+
+  return {
+    total: ids.length,
+    successCount,
+    failureCount: ids.length - successCount,
+    items: resultItems
+  }
 }
 
 export function generateContractNo(): string {

@@ -550,7 +550,7 @@ export default Vue.extend({
 })
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .approval-flow-config {
   .page-header {
     display: flex;
@@ -676,7 +676,7 @@ export default Vue.extend({
     align-items: center;
     margin-bottom: 12px;
   }
-  /deep/ .flow-config-dialog {
+  .flow-config-dialog {
     .el-dialog__body {
       max-height: 70vh;
       overflow-y: auto;

@@ -385,6 +385,66 @@
         <el-button type="primary" @click="confirmAddSign">确认加签</el-button>
       </div>
     </el-dialog>
+
+    <el-dialog
+      :title="batchResultAction === 'approve' ? '批量审批结果' : '批量驳回结果'"
+      :visible.sync="batchResultDialogVisible"
+      width="680px"
+    >
+      <div v-if="batchResultData" class="batch-result-container">
+        <el-row :gutter="16" class="result-stats">
+          <el-col :span="8">
+            <div class="stat-item stat-total">
+              <i class="el-icon-document"></i>
+              <el-statistic title="处理总数" :value="batchResultData.total" />
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="stat-item stat-success">
+              <i class="el-icon-circle-check"></i>
+              <el-statistic title="成功数量" :value="batchResultData.successCount" />
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="stat-item stat-failure">
+              <i class="el-icon-circle-close"></i>
+              <el-statistic title="失败数量" :value="batchResultData.failureCount" />
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-alert
+          v-if="batchResultData.failureCount === 0"
+          type="success"
+          :title="'全部' + (batchResultAction === 'approve' ? '审批' : '驳回') + '成功！'"
+          :closable="false"
+          show-icon
+          style="margin-top: 16px;"
+        />
+
+        <div v-else class="failure-list">
+          <div class="failure-list-title">
+            <i class="el-icon-warning-outline"></i>
+            失败详情（{{ batchResultData.failureCount }} 项）
+          </div>
+          <el-table :data="batchResultData.items.filter(i => !i.success)" border stripe style="width: 100%; margin-top: 12px;">
+            <el-table-column prop="contractNo" label="合同编号" width="160" />
+            <el-table-column prop="userName" label="员工姓名" width="100" />
+            <el-table-column label="错误类型" width="120">
+              <template slot-scope="scope">
+                <el-tag :type="getErrorTagType(scope.row.error?.code || '')" size="small">
+                  {{ getErrorCodeText(scope.row.error?.code || '') }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="error.message" label="错误详情" />
+          </el-table>
+        </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="batchResultDialogVisible = false">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -400,7 +460,8 @@ import {
   returnApproval,
   addSignatory,
   batchApproveContracts,
-  batchRejectContracts
+  batchRejectContracts,
+  ApprovalPermissionException
 } from '@/api/contract'
 import {
   contractTypeMap,
@@ -409,7 +470,14 @@ import {
   approvalModeMap,
   mockUsers
 } from '@/data/mockData'
-import type { WorkerContract, ContractStatus, ContractType, ApprovalStep } from '@/types'
+import type {
+  WorkerContract,
+  ContractStatus,
+  ContractType,
+  ApprovalStep,
+  BatchOperationResult,
+  ApprovalPermissionError
+} from '@/types'
 
 export default Vue.extend({
   name: 'ContractApproval',
@@ -451,6 +519,9 @@ export default Vue.extend({
       delegateDialogVisible: false,
       returnDialogVisible: false,
       addSignDialogVisible: false,
+      batchResultDialogVisible: false,
+      batchResultData: null as BatchOperationResult | null,
+      batchResultAction: '' as 'approve' | 'reject' | '',
 
       currentContract: null as WorkerContract | null,
       approveComment: '',
@@ -490,6 +561,28 @@ export default Vue.extend({
     this.loadStatistics()
   },
   methods: {
+    getErrorCodeText(code: string): string {
+      const map: Record<string, string> = {
+        NOT_APPROVER: '非审批人',
+        NOT_PENDING: '状态异常',
+        CONTRACT_NOT_FOUND: '合同不存在',
+        STEP_NOT_FOUND: '节点不存在',
+        ALREADY_PROCESSED: '已处理',
+        INSUFFICIENT_PERMISSION: '权限不足'
+      }
+      return map[code] || '未知错误'
+    },
+    getErrorTagType(code: string): string {
+      const map: Record<string, string> = {
+        NOT_APPROVER: 'warning',
+        NOT_PENDING: 'info',
+        CONTRACT_NOT_FOUND: 'danger',
+        STEP_NOT_FOUND: 'danger',
+        ALREADY_PROCESSED: 'info',
+        INSUFFICIENT_PERMISSION: 'danger'
+      }
+      return map[code] || 'warning'
+    },
     getTagType(status: ContractStatus): string {
       const map: Record<string, string> = {
         draft: 'info',
@@ -721,13 +814,15 @@ export default Vue.extend({
       }
 
       try {
+        let result: BatchOperationResult
         if (this.batchAction === 'approve') {
-          await batchApproveContracts(this.selectedContractIds, this.batchComment)
-          this.$message.success(`已批量通过 ${this.selectedContractIds.length} 份合同`)
+          result = await batchApproveContracts(this.selectedContractIds, this.batchComment)
         } else {
-          await batchRejectContracts(this.selectedContractIds, this.batchComment)
-          this.$message.success(`已批量驳回 ${this.selectedContractIds.length} 份合同`)
+          result = await batchRejectContracts(this.selectedContractIds, this.batchComment)
         }
+        this.batchResultData = result
+        this.batchResultAction = this.batchAction
+        this.batchResultDialogVisible = true
         this.batchDialogVisible = false
         this.selectedContractIds = []
         this.selection = []
@@ -767,7 +862,11 @@ export default Vue.extend({
           this.loadStatistics()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        if (e instanceof ApprovalPermissionException) {
+          this.$message.error(e.error.message)
+        } else {
+          this.$message.error('操作失败')
+        }
       }
     },
     handleReject(row: WorkerContract) {
@@ -795,7 +894,11 @@ export default Vue.extend({
           this.loadStatistics()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        if (e instanceof ApprovalPermissionException) {
+          this.$message.error(e.error.message)
+        } else {
+          this.$message.error('操作失败')
+        }
       }
     },
     handleDelegate(row: WorkerContract) {
@@ -831,7 +934,11 @@ export default Vue.extend({
           this.loadData()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        if (e instanceof ApprovalPermissionException) {
+          this.$message.error(e.error.message)
+        } else {
+          this.$message.error('操作失败')
+        }
       }
     },
     handleReturn(row: WorkerContract) {
@@ -868,7 +975,11 @@ export default Vue.extend({
           this.loadData()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        if (e instanceof ApprovalPermissionException) {
+          this.$message.error(e.error.message)
+        } else {
+          this.$message.error('操作失败')
+        }
       }
     },
     handleAddSign(row: WorkerContract) {
@@ -904,7 +1015,11 @@ export default Vue.extend({
           this.loadData()
         }
       } catch (e) {
-        this.$message.error('操作失败')
+        if (e instanceof ApprovalPermissionException) {
+          this.$message.error(e.error.message)
+        } else {
+          this.$message.error('操作失败')
+        }
       }
     }
   }
@@ -1032,6 +1147,81 @@ export default Vue.extend({
     display: flex;
     justify-content: flex-end;
     margin-top: 16px;
+  }
+  .batch-result-container {
+    .result-stats {
+      .stat-item {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        border-radius: 8px;
+        background: #f5f7fa;
+
+        i {
+          font-size: 32px;
+          margin-right: 12px;
+        }
+
+        .el-statistic {
+          .el-statistic__head {
+            font-size: 13px;
+            color: #606266;
+          }
+          .el-statistic__content {
+            font-size: 24px;
+            font-weight: bold;
+          }
+        }
+
+        &.stat-total {
+          background: #ecf5ff;
+          i {
+            color: #409EFF;
+          }
+          .el-statistic__content {
+            color: #409EFF;
+          }
+        }
+
+        &.stat-success {
+          background: #f0f9eb;
+          i {
+            color: #67C23A;
+          }
+          .el-statistic__content {
+            color: #67C23A;
+          }
+        }
+
+        &.stat-failure {
+          background: #fef0f0;
+          i {
+            color: #F56C6C;
+          }
+          .el-statistic__content {
+            color: #F56C6C;
+          }
+        }
+      }
+    }
+
+    .failure-list {
+      margin-top: 20px;
+
+      .failure-list-title {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+        color: #303133;
+
+        i {
+          font-size: 18px;
+          color: #E6A23C;
+          margin-right: 6px;
+        }
+      }
+    }
   }
 }
 </style>

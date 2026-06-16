@@ -44,7 +44,7 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <el-badge :value="unreadAlerts" :hidden="unreadAlerts === 0 || !canViewAlerts" class="header-badge" @click="goToAlerts">
+          <el-badge :value="unreadAlerts" :hidden="unreadAlerts === 0 || !canViewAlerts" class="header-badge" @click.native="openMessageDialog">
             <i class="el-icon-bell notification-icon"></i>
           </el-badge>
           <el-dropdown @command="handleCommand" class="user-dropdown">
@@ -76,6 +76,65 @@
         </router-view>
       </el-main>
     </el-container>
+
+    <el-dialog
+      title="消息中心"
+      :visible.sync="messageDialogVisible"
+      width="500px"
+      custom-class="message-dialog"
+      :close-on-click-modal="true"
+      :modal="true"
+      append-to-body
+    >
+      <div class="message-dialog-content">
+        <div class="message-tabs">
+          <div
+            class="message-tab"
+            :class="{ active: activeMessageTab === 'alerts' }"
+            @click="activeMessageTab = 'alerts'"
+          >
+            <i class="el-icon-warning-outline"></i>
+            <span>预警消息</span>
+            <el-badge :value="unreadAlerts" :hidden="unreadAlerts === 0" class="tab-badge" />
+          </div>
+        </div>
+
+        <div class="message-list" v-loading="messageLoading">
+          <div v-if="messageList.length === 0 && !messageLoading" class="empty-state">
+            <i class="el-icon-document"></i>
+            <p>暂无消息</p>
+          </div>
+          <div
+            v-for="item in messageList"
+            :key="item.id"
+            class="message-item"
+            :class="{ unread: !item.handled }"
+            @click="handleMessageClick(item)"
+          >
+            <div class="message-icon">
+              <i :class="getMessageIcon(item.type)"></i>
+            </div>
+            <div class="message-info">
+              <div class="message-title">
+                <span class="message-type-tag" :class="getMessageTagType(item.type)">
+                  {{ alertTypeMap[item.type] || '系统消息' }}
+                </span>
+                <span class="message-time">{{ formatDateTime(item.createdAt) }}</span>
+              </div>
+              <div class="message-user">{{ item.userName }} · {{ item.departmentName }}</div>
+              <div class="message-desc">{{ item.description }}</div>
+            </div>
+            <div class="message-status" v-if="item.handled">
+              <el-tag size="mini" type="info">已处理</el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="goToAlertsPage">查看全部</el-button>
+        <el-button type="primary" @click="messageDialogVisible = false">关闭</el-button>
+      </div>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -83,9 +142,10 @@
 import Vue from 'vue'
 import { mapState, mapGetters } from 'vuex'
 import type { RouteConfig } from 'vue-router'
-import { getInitials } from '@/utils'
+import { getInitials, alertTypeMap, formatDateTime } from '@/utils'
 import { getAlerts } from '@/api/attendance'
 import { groupConfig } from '@/router/asyncRoutes'
+import type { AlertRecord } from '@/types'
 
 interface MenuGroup {
   group: string
@@ -107,7 +167,12 @@ export default Vue.extend({
   data() {
     return {
       isCollapse: false,
-      unreadAlerts: 0
+      unreadAlerts: 0,
+      messageDialogVisible: false,
+      activeMessageTab: 'alerts',
+      messageLoading: false,
+      messageList: [] as AlertRecord[],
+      alertTypeMap
     }
   },
   computed: {
@@ -200,6 +265,48 @@ export default Vue.extend({
       }
       this.$router.push('/alerts')
     },
+    async openMessageDialog() {
+      if (!this.canViewAlerts) {
+        this.$message.warning('您没有权限访问该页面')
+        return
+      }
+      this.messageDialogVisible = true
+      this.messageLoading = true
+      try {
+        const res = await getAlerts({ page: 1, pageSize: 10 })
+        this.messageList = res.list
+      } catch (e) {
+        this.$message.error('加载消息失败')
+      } finally {
+        this.messageLoading = false
+      }
+    },
+    goToAlertsPage() {
+      this.messageDialogVisible = false
+      this.goToAlerts()
+    },
+    handleMessageClick(item: AlertRecord) {
+      this.messageDialogVisible = false
+      this.$router.push('/alerts')
+    },
+    getMessageIcon(type: string): string {
+      const map: Record<string, string> = {
+        late: 'el-icon-time',
+        early: 'el-icon-back',
+        absent: 'el-icon-close',
+        continuous_absent: 'el-icon-warning'
+      }
+      return map[type] || 'el-icon-bell'
+    },
+    getMessageTagType(type: string): string {
+      const map: Record<string, string> = {
+        late: 'tag-warning',
+        early: 'tag-warning',
+        absent: 'tag-danger',
+        continuous_absent: 'tag-danger'
+      }
+      return map[type] || 'tag-info'
+    },
     handleCommand(command: string) {
       switch (command) {
         case 'profile':
@@ -241,9 +348,12 @@ export default Vue.extend({
   background-color: #001529;
   transition: width 0.3s;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   .logo {
     height: 60px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -265,7 +375,9 @@ export default Vue.extend({
 
   .sidebar-menu {
     border-right: none;
-    height: calc(100% - 60px);
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 
@@ -377,5 +489,198 @@ export default Vue.extend({
 ::v-deep .el-dropdown-link {
   cursor: pointer;
   color: #606266;
+}
+
+.sidebar {
+  ::v-deep .el-menu::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::v-deep .el-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  ::v-deep .el-menu::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+::v-deep .message-dialog {
+  .el-dialog__body {
+    padding: 0;
+    max-height: 60vh;
+  }
+}
+
+.message-dialog-content {
+  .message-tabs {
+    display: flex;
+    border-bottom: 1px solid #ebeef5;
+    padding: 0 20px;
+
+    .message-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #606266;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+
+      i {
+        font-size: 16px;
+      }
+
+      &:hover {
+        color: #409EFF;
+      }
+
+      &.active {
+        color: #409EFF;
+        border-bottom-color: #409EFF;
+        font-weight: 500;
+      }
+
+      .tab-badge {
+        margin-left: 4px;
+      }
+    }
+  }
+
+  .message-list {
+    max-height: 450px;
+    overflow-y: auto;
+    padding: 8px 0;
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: #909399;
+
+      i {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+
+    .message-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      border-bottom: 1px solid #f5f7fa;
+
+      &:hover {
+        background-color: #f5f7fa;
+      }
+
+      &.unread {
+        background-color: #ecf5ff;
+
+        &:hover {
+          background-color: #d9ecff;
+        }
+
+        .message-icon {
+          background: linear-gradient(135deg, #409EFF, #36cfc9);
+        }
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .message-icon {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: #f0f2f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #909399;
+        font-size: 18px;
+      }
+
+      .message-info {
+        flex: 1;
+        min-width: 0;
+
+        .message-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 4px;
+
+          .message-type-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+
+            &.tag-warning {
+              background: #fdf6ec;
+              color: #E6A23C;
+            }
+
+            &.tag-danger {
+              background: #fef0f0;
+              color: #F56C6C;
+            }
+
+            &.tag-info {
+              background: #ecf5ff;
+              color: #409EFF;
+            }
+          }
+
+          .message-time {
+            font-size: 12px;
+            color: #909399;
+            flex-shrink: 0;
+          }
+        }
+
+        .message-user {
+          font-size: 13px;
+          color: #606266;
+          margin-bottom: 4px;
+        }
+
+        .message-desc {
+          font-size: 13px;
+          color: #606266;
+          line-height: 1.5;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+      }
+
+      .message-status {
+        flex-shrink: 0;
+        align-self: center;
+      }
+    }
+  }
 }
 </style>
